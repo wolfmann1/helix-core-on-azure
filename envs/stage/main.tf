@@ -1,0 +1,146 @@
+# dev — one commit server, nothing else. The cheapest thing that is still
+# a real Perforce server. Used to iterate on provisioning scripts.
+
+terraform {
+  required_version = ">= 1.9.0"
+  required_providers {
+    azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
+    random  = { source = "hashicorp/random", version = "~> 3.6" }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+locals {
+  prefix = "p4-stage"
+  tags   = { environment = "stage", project = "helix-core-on-azure", owner = "chris" }
+}
+
+resource "azurerm_resource_group" "this" {
+  name     = "${local.prefix}-rg"
+  location = var.location
+  tags     = local.tags
+}
+
+module "network" {
+  source              = "../../modules/network"
+  name_prefix         = local.prefix
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  tags                = local.tags
+}
+
+module "storage" {
+  source              = "../../modules/storage"
+  name_prefix         = local.prefix
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  tags                = local.tags
+}
+
+module "commit" {
+  source              = "../../modules/commit-server"
+  name                = "${local.prefix}-commit-01"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  subnet_id           = module.network.subnet_ids["commit"]
+  vm_size             = "Standard_B2s"
+  ssh_public_key      = var.ssh_public_key
+  install_sdp         = var.install_sdp
+  key_vault_id        = module.storage.key_vault_id
+  tags                = local.tags
+}
+
+module "observability" {
+  source              = "../../modules/observability"
+  name_prefix         = local.prefix
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  alert_email         = var.alert_email
+  tags                = local.tags
+}
+
+# ---- optional tiers, driven by tfvars -------------------------------------
+
+module "edge" {
+  source              = "../../modules/edge-server"
+  count               = var.edge_count
+  name                = "${local.prefix}-edge-${format("%02d", count.index + 1)}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  subnet_id           = module.network.subnet_ids["edge"]
+  vm_size             = "Standard_B2s"
+  ssh_public_key      = var.ssh_public_key
+  install_sdp         = var.install_sdp
+  commit_host         = module.commit.private_ip
+  key_vault_id        = module.storage.key_vault_id
+  tags                = local.tags
+}
+
+module "proxy" {
+  source              = "../../modules/proxy"
+  for_each            = var.proxy_sites
+  name                = "${local.prefix}-proxy-${each.key}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  subnet_id           = module.network.subnet_ids["proxy"]
+  vm_size             = each.value.vm_size
+  ssh_public_key      = var.ssh_public_key
+  install_sdp         = false
+  commit_host         = module.commit.private_ip
+  tags                = merge(local.tags, { site = each.key })
+}
+
+module "broker" {
+  source              = "../../modules/broker"
+  name                = "${local.prefix}-broker-01"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  subnet_id           = module.network.subnet_ids["app"]
+  vm_size             = "Standard_B1ms"
+  ssh_public_key      = var.ssh_public_key
+  install_sdp         = false
+  commit_host         = module.commit.private_ip
+  tags                = local.tags
+}
+
+module "swarm" {
+  source              = "../../modules/swarm"
+  count               = var.enable_swarm ? 1 : 0
+  name                = "${local.prefix}-swarm-01"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  subnet_id           = module.network.subnet_ids["app"]
+  vm_size             = "Standard_B2s"
+  ssh_public_key      = var.ssh_public_key
+  install_sdp         = false
+  commit_host         = module.commit.private_ip
+  key_vault_id        = module.storage.key_vault_id
+  tags                = local.tags
+}
+
+module "p4search" {
+  source              = "../../modules/p4search"
+  count               = var.enable_p4search ? 1 : 0
+  name                = "${local.prefix}-search-01"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.this.name
+  subnet_id           = module.network.subnet_ids["app"]
+  vm_size             = "Standard_D2as_v5" # Elasticsearch floor; smaller will not index
+  ssh_public_key      = var.ssh_public_key
+  install_sdp         = false
+  commit_host         = module.commit.private_ip
+  tags                = local.tags
+}
+
+module "backup" {
+  source                = "../../modules/backup"
+  name_prefix           = local.prefix
+  location              = var.location
+  resource_group_name   = azurerm_resource_group.this.name
+  checkpoint_account_id = module.storage.checkpoint_account_id
+  node_principal_ids    = compact(concat([module.commit.principal_id], [for e in module.edge : e.principal_id]))
+  tags                  = local.tags
+}

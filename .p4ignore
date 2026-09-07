@@ -1,0 +1,26 @@
+# Terraform working state — never versioned
+.terraform/...
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Secrets and local overrides
+*.auto.tfvars
+.env
+*.pem
+*.key
+*.pfx
+
+# Locally installed tooling (see scripts/setup-env.sh)
+.tools/...
+
+# Editor / OS noise
+.vscode/...
+.idea/...
+.DS_Store
+Thumbs.db
+
+# Build and log output
+*.log
+p4search-index/...

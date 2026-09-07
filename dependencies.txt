@@ -1,0 +1,21 @@
+# dependencies.txt — consumed by scripts/setup-env.sh (Linux/WSL) and
+# scripts/setup-env.ps1 (Windows). One tool per line.
+#
+#   name | version | source          | verify-command
+#
+# source values:
+#   hashicorp  -> releases.hashicorp.com
+#   github     -> github.com releases (owner/repo in the version field's suffix)
+#   winget     -> Windows package manager
+#   apt        -> Debian/Ubuntu package manager
+#   pip        -> Python package index
+#
+# Pin every version. An unpinned toolchain is not reproducible, and
+# "works on my machine" is the problem this repo exists to solve.
+
+terraform  | 1.13.3   | hashicorp                          | terraform version
+tflint     | 0.59.1   | github:terraform-linters/tflint    | tflint --version
+checkov    | 3.2.477  | pip                                | checkov --version
+azure-cli  | latest   | winget:Microsoft.AzureCLI          | az version
+gh         | 2.83.0   | github:cli/cli                     | gh --version
+jq         | 1.8.1    | github:jqlang/jq                   | jq --version

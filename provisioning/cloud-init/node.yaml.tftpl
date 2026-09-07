@@ -1,0 +1,14 @@
+#cloud-config
+# Rendered by modules/p4-node. Keep this thin: it exists only to get the
+# repo's own provisioning scripts onto the box and run them. All Perforce
+# knowledge lives in provisioning/, which the Hyper-V path reuses verbatim.
+package_update: true
+write_files:
+  - path: /etc/p4-node-role
+    content: "${role}"
+runcmd:
+  - [ mkdir, -p, /opt/p4-provisioning ]
+  # TODO(chris): replace with a pull from the repo (git or p4) once
+  # scripts/fetch-provisioning.sh exists. Baking the tree into custom_data
+  # hits the 64KB cloud-init limit as the role scripts grow.
+  - [ bash, -lc, "/opt/p4-provisioning/provision.sh ${provision_args} 2>&1 | tee /var/log/p4-provision.log" ]

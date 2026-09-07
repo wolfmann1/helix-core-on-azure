@@ -1,0 +1,56 @@
+name: apply
+
+on:
+  push:
+    branches: [main]
+    paths: ['modules/**', 'envs/**', 'provisioning/**']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to apply
+        required: true
+        default: dev
+        type: choice
+        options: [dev, stage, prod]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    # The gate. `stage` and `prod` are GitHub Environments with required
+    # reviewers configured; the run pauses here until a human approves.
+    # This is the difference between a pipeline that deploys and a pipeline
+    # that controls change.
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.13.3 }
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Re-plan
+        # Never apply a stale plan. Re-planning at apply time is what catches
+        # drift introduced between review and merge.
+        run: |
+          ENV=${{ inputs.environment || 'dev' }}
+          terraform -chdir=envs/$ENV init
+          terraform -chdir=envs/$ENV plan -out=tfplan
+
+      - name: Apply
+        run: |
+          ENV=${{ inputs.environment || 'dev' }}
+          terraform -chdir=envs/$ENV apply -auto-approve tfplan
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apply-log-${{ inputs.environment || 'dev' }}
+          path: envs/*/tfplan

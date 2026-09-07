@@ -1,0 +1,29 @@
+{
+  "$comment": "Same roles and volume labels as the Azure modules. Sizes are the minimum that run.",
+  "vms": [
+    {
+      "name": "p4-commit-01", "role": "commit", "vcpu": 2, "memoryGB": 4,
+      "dataDisks": [
+        { "label": "p4db", "sizeGB": 16 },
+        { "label": "p4logs", "sizeGB": 16 },
+        { "label": "p4depots", "sizeGB": 32 }
+      ]
+    },
+    {
+      "name": "p4-edge-01", "role": "edge", "vcpu": 2, "memoryGB": 4, "optional": true,
+      "dataDisks": [
+        { "label": "p4db", "sizeGB": 16 },
+        { "label": "p4logs", "sizeGB": 16 },
+        { "label": "p4depots", "sizeGB": 32 }
+      ]
+    },
+    {
+      "name": "p4-proxy-01", "role": "proxy", "vcpu": 1, "memoryGB": 2, "optional": true,
+      "dataDisks": [ { "label": "p4depots", "sizeGB": 32 } ]
+    },
+    {
+      "name": "p4-swarm-01", "role": "swarm", "vcpu": 2, "memoryGB": 4, "optional": true,
+      "dataDisks": []
+    }
+  ]
+}
