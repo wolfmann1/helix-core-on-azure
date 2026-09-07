@@ -128,6 +128,7 @@ A local Hyper-V option using the same provisioning scripts is documented in
 
 ## 6. Reference documentation
 
+- [Getting Started with P4](https://help.perforce.com/helix-core/quickstart/current/Content/quickstart/Home-quickstart.html)
 - [P4 Server Administration Guide (2026.1)](https://help.perforce.com/helix-core/server-apps/p4sag/current/Content/P4SAG/Home-p4sag.html)
 - [P4 Server Deployment Package (SDP) Guide, UNIX/Linux](https://swarm.workshop.perforce.com/view/guest/perforce_software/sdp/main/doc/SDP_Guide.Unix.html) — volume layout, `mkdirs.sh`, checkpoint and journal scripts
 - [P4 Code Review documentation (2026.3)](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/home-swarm.html) (formerly Helix Swarm), and its [runtime dependencies](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/setup.dependencies.html)
