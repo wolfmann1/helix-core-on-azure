@@ -35,13 +35,20 @@ variable "vm_size" {
 
 variable "os_image" {
   description = <<-EOT
-    Marketplace image. Default is Ubuntu 24.04 LTS.
+    Marketplace image. Must be an OS that P4 Code Review (Swarm) supports,
+    because Swarm is the binding constraint for the whole estate.
 
-    NOTE: Ubuntu 26.04 is deliberately NOT the default. P4 Code Review (Swarm)
-    2026.3 supports Ubuntu 22.04/24.04 LTS, RHEL 8/9 and Rocky 8/9 only. Since
-    Swarm support is the binding constraint for the estate, 24.04 is the
-    newest Ubuntu that keeps every component supported. Switch to RHEL 9 by
-    overriding this map.
+    Supported as of Swarm 2026.3: Ubuntu 22.04 / 24.04 LTS, RHEL 8 / 9,
+    Rocky Linux 8 / 9. Ubuntu 26.04 is NOT supported and is rejected by the
+    validation below rather than failing later during provisioning.
+
+    RHEL 9 alternative:
+      os_image = {
+        publisher = "RedHat"
+        offer     = "RHEL"
+        sku       = "9-lvm-gen2"
+        version   = "latest"
+      }
   EOT
   type = object({
     publisher = string
@@ -54,6 +61,16 @@ variable "os_image" {
     offer     = "ubuntu-24_04-lts"
     sku       = "server"
     version   = "latest"
+  }
+
+  validation {
+    condition = contains([
+      "ubuntu-24_04-lts",
+      "ubuntu-22_04-lts",
+      "RHEL",
+      "rockylinux-x86_64",
+    ], var.os_image.offer)
+    error_message = "os_image.offer must be an OS supported by P4 Code Review: Ubuntu 22.04/24.04 LTS, RHEL 8/9, or Rocky Linux 8/9. Ubuntu 26.04 is not supported."
   }
 }
 

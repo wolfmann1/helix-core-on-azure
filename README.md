@@ -123,3 +123,18 @@ A credit-free local option using the same provisioning scripts lives in
 Sources: Perforce documentation for
 [P4 Code Review runtime dependencies](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/setup.dependencies.html)
 and [P4 Search installation requirements](https://help.perforce.com/helix-core/integrations-plugins/p4search/current/Content/P4Search/prereqs-scenarios.html).
+
+## 6. Working on Windows
+
+Every script has a PowerShell counterpart; the bash versions exist because the
+GitHub Actions runners are Linux.
+
+| Task | PowerShell | bash / CI |
+|---|---|---|
+| Install pinned tooling | `.\scripts\setup-env.ps1` | `./scripts/setup-env.sh` |
+| Pre-commit checks | `.\scripts\ci-checks.ps1` | `./scripts/ci-checks.sh` |
+| Destroy an environment | `.\scripts\teardown.ps1 -Environment dev` | `./scripts/teardown.sh dev` |
+| Build the local lab | `.\local\hyperv\New-P4Lab.ps1` | — (Hyper-V is Windows-only) |
+
+The pairs run the same sequence against the same `dependencies.txt`. Keep them
+in step when you change either.

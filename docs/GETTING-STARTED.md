@@ -2,11 +2,19 @@
 
 ## 0. Tooling
 
-```bash
-./scripts/setup-env.sh --check   # what's missing
-./scripts/setup-env.sh           # install into ./.tools
+**PowerShell (the primary path here):**
+```powershell
+.\scripts\setup-env.ps1 -Check   # what's missing
+.\scripts\setup-env.ps1          # install into .\.tools
 ```
-Windows: `.\scripts\setup-env.ps1`. Versions are pinned in `dependencies.txt`.
+
+**bash / WSL / CI:**
+```bash
+./scripts/setup-env.sh --check
+./scripts/setup-env.sh
+```
+
+Versions are pinned in `dependencies.txt`; both scripts read the same file.
 
 ## 1. Azure prerequisites (yours, not Terraform's)
 
@@ -43,7 +51,18 @@ provisioning scripts and costs nothing. Develop there, prove in Azure.
 ## Status
 
 This scaffold has **not** been run through `terraform validate` — there was no
-Terraform binary available when it was generated. Step one is
-`./scripts/ci-checks.sh dev`, and expect to fix things. Resource blocks marked
-`TODO(chris)` are intentionally unimplemented; they are the parts worth building
-by hand rather than reading.
+Terraform binary available when it was generated. Step one:
+
+```powershell
+.\scripts\ci-checks.ps1                 # dev
+.\scripts\ci-checks.ps1 -Environment prod
+.\scripts\ci-checks.ps1 -SkipScan       # fast inner loop
+```
+
+Expect to fix things. Resource blocks marked `TODO(chris)` are intentionally
+unimplemented; they are the parts worth building by hand rather than reading.
+
+`ci-checks.ps1` and `ci-checks.sh` run the same sequence. The pipeline uses the
+`.sh` version because GitHub runners are Linux, so a failure locally is a
+failure in CI. **If you change one, change both** — a divergence between them is
+worse than having only one.
