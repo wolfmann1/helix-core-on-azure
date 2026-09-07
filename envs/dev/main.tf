@@ -50,6 +50,12 @@ module "commit" {
   ssh_public_key      = var.ssh_public_key
   install_sdp         = var.install_sdp
   key_vault_id        = module.storage.key_vault_id
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = local.tags
 }
 

@@ -45,3 +45,34 @@ variable "install_sdp" {
   type        = bool
   default     = true
 }
+
+variable "disk_tier" {
+  description = "Managed disk type for all Perforce data disks: premium, standard, premium_v2 or hdd."
+  type        = string
+  default     = "standard"
+}
+variable "disk_sizes_gb" {
+  description = "Per-volume size overrides in GiB (p4db, p4db2, p4logs, p4depots, p4, p4ckps). Empty uses the lab defaults in modules/p4-node."
+  type        = map(number)
+  default     = {}
+}
+variable "split_metadata" {
+  description = "Place metadata on two volumes (p4db and p4db2) rather than one."
+  type        = bool
+  default     = true
+}
+variable "separate_sdp_volumes" {
+  description = "Give /p4 and /p4ckps their own volumes rather than placing them on p4depots."
+  type        = bool
+  default     = false
+}
+variable "serverlocks_tmpfs_mb" {
+  description = "Size of the tmpfs mounted for server lock files. 0 skips it."
+  type        = number
+  default     = 1024
+}
+variable "zone" {
+  description = "Availability zone. Required when disk_tier is premium_v2 in most regions."
+  type        = string
+  default     = null
+}

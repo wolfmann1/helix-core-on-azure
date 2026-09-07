@@ -39,12 +39,14 @@ alert.
 
 ## 2. Design decisions
 
-**Three separate volumes: `p4db`, `p4logs`, `p4depots`.**
-Metadata, journal and logs, and archive files each get their own disk. A full
+**Separate volumes for metadata, journal and archive.**
+`p4db` and `p4db2` hold metadata, `p4logs` holds the journal and structured
+logs, `p4depots` holds archive files, and `server.locks` sits on a tmpfs. A full
 `p4logs` stops the server. If the journal shares a volume with metadata, depot
 or log growth can cause an outage on the metadata volume. Separating them bounds
-each failure and gives each its own alert threshold. Implemented in
-`provisioning/common/volumes.sh`.
+each failure and gives each its own alert threshold. Sizes and disk tier are
+configurable per environment; see ARCHITECTURE.md for the layout table and the
+Azure size floors. Implemented in `provisioning/common/volumes.sh`.
 
 **Checkpoint alerts on both failure and duration.**
 A checkpoint that still succeeds but now takes three times as long is an early
@@ -124,11 +126,15 @@ A local Hyper-V option using the same provisioning scripts is documented in
 - **SDP** is installed via the `install_sdp` parameter, so a plain p4d can be
   deployed alongside for comparison.
 
-References: Perforce documentation for
-[P4 Code Review runtime dependencies](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/setup.dependencies.html)
-and [P4 Search installation requirements](https://help.perforce.com/helix-core/integrations-plugins/p4search/current/Content/P4Search/prereqs-scenarios.html).
+## 6. Reference documentation
 
-## 6. Working on Windows
+- [P4 Server Administration Guide (2026.1)](https://help.perforce.com/helix-core/server-apps/p4sag/current/Content/P4SAG/Home-p4sag.html)
+- [P4 Server Deployment Package (SDP) Guide, UNIX/Linux](https://swarm.workshop.perforce.com/view/guest/perforce_software/sdp/main/doc/SDP_Guide.Unix.html) — volume layout, `mkdirs.sh`, checkpoint and journal scripts
+- [P4 Code Review documentation (2026.3)](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/home-swarm.html) (formerly Helix Swarm), and its [runtime dependencies](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/setup.dependencies.html)
+- [P4 Search documentation (2026.4)](https://help.perforce.com/helix-core/integrations-plugins/p4search/current/Content/P4Search/Home-p4search.html), and its [installation requirements](https://help.perforce.com/helix-core/integrations-plugins/p4search/current/Content/P4Search/prereqs-scenarios.html)
+- [Azure managed disk types and sizes](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-types) — the 4 GiB floor on Premium SSD v1 and Standard SSD
+
+## 7. Working on Windows
 
 Each script has a PowerShell version. The bash versions exist because the GitHub
 Actions runners are Linux.

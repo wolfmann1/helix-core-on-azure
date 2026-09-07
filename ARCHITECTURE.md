@@ -24,23 +24,63 @@
 
 ## Decisions
 
-### Three volumes rather than one
+### Volume layout
 
-`p4db` holds metadata, `p4logs` holds the journal and structured logs, and
-`p4depots` holds archive files.
+| Volume | Holds | Default size | Notes |
+|---|---|---|---|
+| `p4db` | metadata, `db.*` files | 2 GiB | ReadOnly host caching |
+| `p4db2` | second metadata volume | 2 GiB | Omitted when `split_metadata = false` |
+| `p4logs` | journal and structured logs | 2 GiB | No host caching |
+| `p4depots` | versioned archive files | 5 GiB | No host caching |
+| `p4` | SDP root | 1 GiB | Only when `separate_sdp_volumes = true`, otherwise on `p4depots` |
+| `p4ckps` | checkpoints | 1 GiB | Same condition as `p4` |
+| `p4serverlocks` | `server.locks` | 1024 MiB tmpfs | RAM, not a disk |
 
-SDP expects these at `/hxmetadata`, `/hxlogs` and `/hxdepots`. This repository
-mounts the `p4*` names and symlinks the SDP paths onto them, so SDP tooling runs
-unmodified while the mount points describe their contents.
+SDP expects these under the `hx*` names. `provisioning/common/volumes.sh` mounts
+the `p4*` names and symlinks `/hxmetadata`, `/hxmetadata1`, `/hxmetadata2`,
+`/hxlogs`, `/hxdepots`, `/hxcheckpoints` and `/hxserverlocks` onto them, so SDP
+tooling runs unmodified and the mount points describe their contents.
 
-The reason for the split: a full `p4logs` stops p4d, because the journal cannot
-be written. If the journal shares a volume with metadata, ordinary depot or log
-growth becomes an availability incident. Separate volumes keep each failure
-contained and allow separate alert thresholds.
+The defaults are sized for an environment that is built up and torn down
+repeatedly rather than one holding real depot content. Override any of them
+through `disk_sizes_gb`.
 
-Host caching differs per volume. `p4db` uses ReadOnly caching; `p4logs` and
-`p4depots` use none. Sequential journal writes gain nothing from host cache and
-can be slowed by it.
+**Why the volumes are split.** A full `p4logs` stops p4d, because the journal
+cannot be written. If the journal shares a volume with metadata, ordinary depot
+or log growth becomes an availability incident. Separate volumes keep each
+failure contained and allow separate alert thresholds.
+
+**Why metadata is split across two volumes by default.** SDP supports placing
+`db.*` files across two metadata volumes, which separates the I/O of the largest
+tables from the rest. At lab sizes this makes no measurable difference, but it
+means the topology and the provisioning path match a real deployment. Set
+`split_metadata = false` for a single metadata volume.
+
+**Server locks in RAM.** SDP recommends placing the `server.locks` directory on
+tmpfs. It is created as an fstab tmpfs entry rather than a managed disk. Set
+`serverlocks_tmpfs_mb = 0` to skip it.
+
+### Disk tier and Azure size floors
+
+`disk_tier` selects the managed disk type for every data disk on a node:
+
+| `disk_tier` | Azure type | Smallest disk | Host caching |
+|---|---|---|---|
+| `standard` (default) | `StandardSSD_LRS` | 4 GiB | Supported |
+| `premium` | `Premium_LRS` | 4 GiB | Supported |
+| `premium_v2` | `PremiumV2_LRS` | 1 GiB, 1 GiB increments | Not supported |
+| `hdd` | `Standard_LRS` | 32 GiB | Supported |
+
+Azure will not allocate a disk below its type's smallest tier. The 2 GiB
+defaults therefore become 4 GiB on `standard` and `premium`, and 32 GiB on
+`hdd`. `modules/p4-node` rounds requested sizes up to the floor rather than
+failing, so a rebuild does not error on a size Azure will not allocate. Only
+`premium_v2` allocates 2 GiB exactly, and it requires a zonal VM in most regions
+and does not support host caching — set `zone` when using it.
+
+Host caching differs per volume where the type supports it: `p4db` and `p4db2`
+use ReadOnly, everything else uses none. Sequential journal writes gain nothing
+from host cache and can be slowed by it.
 
 ### An edge server has its own metadata
 

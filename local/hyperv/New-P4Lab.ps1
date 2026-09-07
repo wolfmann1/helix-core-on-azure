@@ -35,7 +35,15 @@ foreach ($vm in $spec.vms) {
          -SwitchName $SwitchName -Path $VhdRoot | Out-Null
   Set-VMProcessor -VMName $vm.name -Count $vm.vcpu
 
-  foreach ($d in $vm.dataDisks) {
+  $disks = @($vm.dataDisks)
+  if ($spec.defaults.separateSdpVolumes -and $vm.optionalDisks) {
+    $disks += @($vm.optionalDisks | Where-Object { $_.when -eq 'separateSdpVolumes' })
+  }
+  if (-not $spec.defaults.splitMetadata) {
+    $disks = $disks | Where-Object { $_.label -ne 'p4db2' }
+  }
+
+  foreach ($d in $disks) {
     $vhd = Join-Path $VhdRoot "$($vm.name)-$($d.label).vhdx"
     New-VHD -Path $vhd -SizeBytes ($d.sizeGB * 1GB) -Dynamic | Out-Null
     Add-VMHardDiskDrive -VMName $vm.name -Path $vhd
@@ -47,4 +55,9 @@ foreach ($vm in $spec.vms) {
 
 Write-Host ""
 Write-Host "Next: boot each VM, then from an SSH session run:"
-Write-Host "  sudo ./provisioning/provision.sh --role <role> --install-sdp true --commit-host <ip>"
+Write-Host "  sudo ./provisioning/provision.sh --role <role> --install-sdp true \"
+Write-Host "       --commit-host <ip> --serverlocks-mb $($spec.defaults.serverlocksTmpfsMB)"
+Write-Host ""
+Write-Host "Label each data VHD inside the guest to match its 'label' value;"
+Write-Host "provisioning/common/volumes.sh mounts by LABEL=, which is what keeps"
+Write-Host "the Azure and Hyper-V paths identical."

@@ -21,6 +21,7 @@ P4PORT="1666"
 SDP_INSTANCE="1"
 COMMIT_HOST=""
 P4_VERSION="latest"
+SERVERLOCKS_MB="1024"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -30,6 +31,7 @@ while [[ $# -gt 0 ]]; do
     --sdp-instance) SDP_INSTANCE="$2"; shift 2 ;;
     --commit-host)  COMMIT_HOST="$2"; shift 2 ;;
     --p4-version)   P4_VERSION="$2"; shift 2 ;;
+    --serverlocks-mb) SERVERLOCKS_MB="$2"; shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -37,7 +39,7 @@ done
 [[ -z "$ROLE" ]] && { echo "--role is required" >&2; exit 2; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export SDP_INSTANCE P4PORT COMMIT_HOST P4_VERSION
+export SDP_INSTANCE P4PORT COMMIT_HOST P4_VERSION SERVERLOCKS_MB
 
 # ---- 1. OS detection -------------------------------------------------------
 . /etc/os-release
@@ -54,9 +56,11 @@ echo "[provision] role=$ROLE os=$ID $VERSION_ID family=$OS_FAMILY sdp=$INSTALL_S
 "$HERE/common/packages.sh" "$ROLE"
 
 # ---- 3. Volume layout ------------------------------------------------------
-# p4db     -> database (db.*)          : fastest disk
-# p4logs   -> journal + structured logs: separate disk, must never share with p4db
-# p4depots -> versioned archive files  : large disk
+# p4db / p4db2 -> database (db.*)          : fastest disks
+# p4logs       -> journal + structured logs: separate disk, never shared with p4db
+# p4depots     -> versioned archive files  : large disk
+# p4 / p4ckps  -> SDP root and checkpoints : optional separate volumes
+# p4serverlocks-> server.locks              : tmpfs in RAM
 "$HERE/common/volumes.sh" "$ROLE"
 
 # ---- 4. SDP (optional, parameterised) --------------------------------------

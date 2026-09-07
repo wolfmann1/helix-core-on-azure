@@ -1,25 +1,36 @@
 {
-  "$comment": "Same roles and volume labels as the Azure modules. Sizes are the minimum that run.",
+  "$comment": "Same roles, volume labels and default sizes as the Azure modules. Hyper-V has no minimum disk size, so the 2 GiB defaults apply exactly. p4serverlocks is a tmpfs created by provisioning/common/volumes.sh, not a VHD.",
+  "defaults": {
+    "serverlocksTmpfsMB": 1024,
+    "splitMetadata": true,
+    "separateSdpVolumes": false
+  },
   "vms": [
     {
       "name": "p4-commit-01", "role": "commit", "vcpu": 2, "memoryGB": 4,
       "dataDisks": [
-        { "label": "p4db", "sizeGB": 16 },
-        { "label": "p4logs", "sizeGB": 16 },
-        { "label": "p4depots", "sizeGB": 32 }
+        { "label": "p4db", "sizeGB": 2 },
+        { "label": "p4db2", "sizeGB": 2 },
+        { "label": "p4logs", "sizeGB": 2 },
+        { "label": "p4depots", "sizeGB": 5 }
+      ],
+      "optionalDisks": [
+        { "label": "p4", "sizeGB": 1, "when": "separateSdpVolumes" },
+        { "label": "p4ckps", "sizeGB": 1, "when": "separateSdpVolumes" }
       ]
     },
     {
       "name": "p4-edge-01", "role": "edge", "vcpu": 2, "memoryGB": 4, "optional": true,
       "dataDisks": [
-        { "label": "p4db", "sizeGB": 16 },
-        { "label": "p4logs", "sizeGB": 16 },
-        { "label": "p4depots", "sizeGB": 32 }
+        { "label": "p4db", "sizeGB": 2 },
+        { "label": "p4db2", "sizeGB": 2 },
+        { "label": "p4logs", "sizeGB": 2 },
+        { "label": "p4depots", "sizeGB": 5 }
       ]
     },
     {
       "name": "p4-proxy-01", "role": "proxy", "vcpu": 1, "memoryGB": 2, "optional": true,
-      "dataDisks": [ { "label": "p4depots", "sizeGB": 32 } ]
+      "dataDisks": [ { "label": "p4depots", "sizeGB": 5 } ]
     },
     {
       "name": "p4-swarm-01", "role": "swarm", "vcpu": 2, "memoryGB": 4, "optional": true,

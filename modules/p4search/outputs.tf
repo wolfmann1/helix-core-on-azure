@@ -10,3 +10,8 @@ output "name" {
   description = "Node name."
   value       = module.node.name
 }
+
+output "data_disks" {
+  description = "Volumes attached to this node after tier minimums were applied."
+  value       = module.node.data_disks
+}

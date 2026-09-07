@@ -15,10 +15,11 @@ module "node" {
   install_sdp         = var.install_sdp
   commit_host         = var.commit_host
   key_vault_id        = var.key_vault_id
-  data_disks          = {
-    p4db     = { size_gb = lookup(var.disk_sizes_gb, "p4db", 32),      tier = "Premium_LRS",     lun = 0 }
-    p4logs   = { size_gb = lookup(var.disk_sizes_gb, "p4logs", 32),    tier = "Premium_LRS",     lun = 1 }
-    p4depots = { size_gb = lookup(var.disk_sizes_gb, "p4depots", 64),  tier = "StandardSSD_LRS", lun = 2 }
-  }
-  tags                = var.tags
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
+  tags                 = var.tags
 }

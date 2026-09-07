@@ -50,6 +50,12 @@ module "commit" {
   ssh_public_key      = var.ssh_public_key
   install_sdp         = var.install_sdp
   key_vault_id        = module.storage.key_vault_id
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = local.tags
 }
 
@@ -76,6 +82,12 @@ module "edge" {
   install_sdp         = var.install_sdp
   commit_host         = module.commit.private_ip
   key_vault_id        = module.storage.key_vault_id
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = local.tags
 }
 
@@ -90,6 +102,12 @@ module "proxy" {
   ssh_public_key      = var.ssh_public_key
   install_sdp         = false
   commit_host         = module.commit.private_ip
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = merge(local.tags, { site = each.key })
 }
 
@@ -103,6 +121,12 @@ module "broker" {
   ssh_public_key      = var.ssh_public_key
   install_sdp         = false
   commit_host         = module.commit.private_ip
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = local.tags
 }
 
@@ -118,6 +142,12 @@ module "swarm" {
   install_sdp         = false
   commit_host         = module.commit.private_ip
   key_vault_id        = module.storage.key_vault_id
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = local.tags
 }
 
@@ -132,6 +162,12 @@ module "p4search" {
   ssh_public_key      = var.ssh_public_key
   install_sdp         = false
   commit_host         = module.commit.private_ip
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = local.tags
 }
 
@@ -184,5 +220,11 @@ module "standby" {
   ssh_public_key      = var.ssh_public_key
   install_sdp         = var.install_sdp
   commit_host         = module.commit.private_ip
+  disk_tier            = var.disk_tier
+  disk_sizes_gb        = var.disk_sizes_gb
+  split_metadata       = var.split_metadata
+  separate_sdp_volumes = var.separate_sdp_volumes
+  serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
+  zone                 = var.zone
   tags                = merge(local.tags, { role = "dr" })
 }

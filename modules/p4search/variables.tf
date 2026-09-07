@@ -39,7 +39,7 @@ variable "key_vault_id" {
   default     = ""
 }
 variable "disk_sizes_gb" {
-  description = "Override data disk sizes by volume label."
+  description = "Per-volume size overrides in GiB (p4db, p4db2, p4logs, p4depots, p4, p4ckps). Defaults are set in modules/p4-node and sized for a lab."
   type        = map(number)
   default     = {}
 }
@@ -47,4 +47,29 @@ variable "tags" {
   description = "Tags applied to the node."
   type        = map(string)
   default     = {}
+}
+variable "disk_tier" {
+  description = "Managed disk type: premium, standard, premium_v2 or hdd. See modules/p4-node for the size floors each implies."
+  type        = string
+  default     = "standard"
+}
+variable "split_metadata" {
+  description = "Place metadata on two volumes (p4db and p4db2) rather than one."
+  type        = bool
+  default     = true
+}
+variable "separate_sdp_volumes" {
+  description = "Give /p4 and /p4ckps their own volumes rather than placing them on p4depots."
+  type        = bool
+  default     = false
+}
+variable "serverlocks_tmpfs_mb" {
+  description = "Size of the tmpfs mounted for server lock files. 0 skips it."
+  type        = number
+  default     = 1024
+}
+variable "zone" {
+  description = "Availability zone. Required when disk_tier is premium_v2 in most regions."
+  type        = string
+  default     = null
 }

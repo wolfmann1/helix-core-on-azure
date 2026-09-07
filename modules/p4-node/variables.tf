@@ -74,14 +74,72 @@ variable "os_image" {
   }
 }
 
-variable "data_disks" {
-  description = "Data disks to attach, keyed by volume label (p4db, p4logs, p4depots). The label is what provisioning/common/volumes.sh mounts by."
-  type = map(object({
-    size_gb = number
-    tier    = string
-    lun     = number
-  }))
-  default = {}
+variable "disk_tier" {
+  description = <<-EOT
+    Managed disk type for all data disks on this node.
+
+      premium    -> Premium_LRS      (Premium SSD v1, minimum 4 GiB)
+      standard   -> StandardSSD_LRS  (Standard SSD, minimum 4 GiB)  [default]
+      premium_v2 -> PremiumV2_LRS    (Premium SSD v2, minimum 1 GiB)
+      hdd        -> Standard_LRS     (Standard HDD, minimum 32 GiB)
+
+    Premium SSD v2 is the only type that honours sizes below 4 GiB, but it
+    cannot use host caching and, in most regions with availability zones, can
+    only attach to a zonal VM. Set var.zone when using it.
+
+    Sizes smaller than the selected type's minimum are rounded up rather than
+    rejected, so a teardown-and-rebuild cycle does not fail on a size that
+    Azure will not allocate.
+  EOT
+  type        = string
+  default     = "standard"
+  validation {
+    condition     = contains(["premium", "standard", "premium_v2", "hdd"], var.disk_tier)
+    error_message = "disk_tier must be one of: premium, standard, premium_v2, hdd."
+  }
+}
+
+variable "disk_sizes_gb" {
+  description = <<-EOT
+    Per-volume size overrides in GiB. Unset volumes use the defaults below,
+    which are sized for a lab that is built up and torn down repeatedly:
+
+      p4db     2   metadata, db.* files
+      p4db2    2   second metadata volume (see split_metadata)
+      p4logs   2   journal and structured logs
+      p4depots 5   versioned archive files
+      p4       1   SDP root, when separate_sdp_volumes is true
+      p4ckps   1   checkpoints, when separate_sdp_volumes is true
+
+    p4serverlocks is not in this map. It is a tmpfs in RAM, not a disk; its
+    size is set by var.serverlocks_tmpfs_mb.
+  EOT
+  type        = map(number)
+  default     = {}
+}
+
+variable "split_metadata" {
+  description = "Place metadata on two volumes (p4db and p4db2) rather than one. SDP supports splitting db.* files across two metadata volumes; set false for a single shared metadata disk."
+  type        = bool
+  default     = true
+}
+
+variable "separate_sdp_volumes" {
+  description = "Give /p4 (SDP root) and /p4ckps (checkpoints) their own volumes rather than placing them on p4depots. Off by default because it adds two disks to every node."
+  type        = bool
+  default     = false
+}
+
+variable "serverlocks_tmpfs_mb" {
+  description = "Size of the tmpfs mounted for server lock files. SDP recommends placing server.locks in RAM. Set to 0 to skip the tmpfs entirely."
+  type        = number
+  default     = 1024
+}
+
+variable "zone" {
+  description = "Availability zone for the VM and its disks. Required when disk_tier is premium_v2 in most regions."
+  type        = string
+  default     = null
 }
 
 variable "install_sdp" {

@@ -11,3 +11,13 @@ enable_swarm    = true
 enable_p4search = false # Elasticsearch floor is 4 vCPU / 8GB per component — turn on deliberately
 enable_standby  = true
 install_sdp     = true
+
+# Disk configuration. prod uses premium disks and separate SDP volumes so the
+# topology matches a real deployment; sizes stay small because this environment
+# is built up and torn down rather than run continuously.
+disk_tier            = "premium"
+disk_sizes_gb        = { p4db = 8, p4db2 = 8, p4logs = 8, p4depots = 32 }
+split_metadata       = true
+separate_sdp_volumes = true
+serverlocks_tmpfs_mb = 1024
+zone                 = "1"
