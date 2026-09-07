@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# teardown.sh <env> — destroy an on-demand environment after evidence capture.
-# Pairs with the on-demand strategy in local/hyperv/README.md.
+# teardown.sh <env> — destroy an on-demand environment after evidence has been
+# captured. See local/hyperv/README.md for when to use on-demand environments.
 set -euo pipefail
 ENVIRONMENT="${1:?environment required}"
 cd "$(dirname "$0")/.."

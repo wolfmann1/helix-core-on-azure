@@ -1,7 +1,7 @@
 #cloud-config
-# Rendered by modules/p4-node. Keep this thin: it exists only to get the
-# repo's own provisioning scripts onto the box and run them. All Perforce
-# knowledge lives in provisioning/, which the Hyper-V path reuses verbatim.
+# Rendered by modules/p4-node. Kept minimal: its only job is to place the
+# provisioning scripts on the host and run them. The configuration itself
+# lives in provisioning/, which the Hyper-V path reuses unchanged.
 package_update: true
 write_files:
   - path: /etc/p4-node-role

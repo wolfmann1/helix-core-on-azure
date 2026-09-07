@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # setup-env.sh — resolve and install everything in dependencies.txt.
 #
-# Stretch goal 1: clone from GitHub or sync from Perforce, run one script,
-# get a working environment. Installs into ./.tools (gitignored, p4ignored)
-# so nothing pollutes the system and the whole thing is deletable.
+# Clone from GitHub or sync from Perforce, run this script, and the toolchain
+# is in place. Installs into ./.tools, which is excluded by .gitignore and
+# .p4ignore, so nothing is installed system-wide and the directory can be
+# deleted to reset.
 #
 #   ./scripts/setup-env.sh          # install
 #   ./scripts/setup-env.sh --check  # verify only, no install

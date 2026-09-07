@@ -1,9 +1,8 @@
 # Bootstrap — creates the Terraform state backend.
 #
-# Every IaC repo has this chicken-and-egg problem: the state backend cannot
-# itself live in the state it stores. This config is applied ONCE, by hand,
-# with local state, and that local state is then committed to a private
-# location (not this repo). Naming the problem is better than hiding it.
+# The state backend cannot store its own state, so this configuration is
+# applied once, by hand, using local state. Keep that local state somewhere
+# private; it is not committed here.
 
 terraform {
   required_version = ">= 1.9.0"

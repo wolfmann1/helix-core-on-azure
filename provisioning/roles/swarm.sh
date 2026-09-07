@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # swarm.sh — P4 Code Review (formerly Helix Swarm).
 #
-# Constraints that are NOT negotiable (Perforce docs, 2026.3):
+# Documented requirements (Perforce docs, 2026.3):
 #   * Apache 2.4, prefork MPM only — worker and event are incompatible
 #   * PHP 8.2-8.5, NON-THREADED — the P4 PHP API is not thread-safe
 #   * Redis is required for cache management

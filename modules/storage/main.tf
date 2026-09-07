@@ -1,6 +1,6 @@
-# Offsite checkpoint destination and the Key Vault that holds every secret
-# the estate needs. Deliberately separate from the Terraform state account:
-# blast radius, and different access patterns.
+# Offsite checkpoint destination and the Key Vault holding the estate's
+# secrets. Kept separate from the Terraform state account, which has different
+# access patterns and a different set of principals.
 
 resource "random_string" "sa" {
   length  = 6

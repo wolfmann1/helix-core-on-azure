@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # install-sdp.sh — install the Perforce Server Deployment Package.
 #
-# SDP is optional by parameter (--install-sdp false) so this repo can also
-# stand up a plain p4d for comparison. Keeping both paths honest is worth
-# the small extra effort: it is the difference between "I use SDP" and
-# "I know what SDP does for me".
+# SDP is optional via --install-sdp false, so a plain p4d can be deployed for
+# comparison. Maintaining both paths costs little and makes the differences
+# between them explicit.
 set -euo pipefail
 
 SDP_URL="${SDP_URL:-https://swarm.workshop.perforce.com/downloads/guest/perforce_software/sdp/sdp.Unix.tgz}"

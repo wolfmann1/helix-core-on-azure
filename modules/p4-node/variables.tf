@@ -28,7 +28,7 @@ variable "subnet_id" {
 }
 
 variable "vm_size" {
-  description = "Azure VM size. Defaults are the smallest that will actually run the role — this repo optimises for capability, not throughput."
+  description = "Azure VM size. Defaults are the smallest that will run the role, since these environments exercise the architecture rather than serve production load."
   type        = string
   default     = "Standard_B2s"
 }
@@ -85,7 +85,7 @@ variable "data_disks" {
 }
 
 variable "install_sdp" {
-  description = "Install the Perforce Server Deployment Package. Exposed as a parameter so a plain p4d can be stood up for comparison."
+  description = "Install the Perforce Server Deployment Package. Exposed as a parameter so a plain p4d can be deployed for comparison."
   type        = bool
   default     = true
 }
@@ -115,7 +115,7 @@ variable "admin_username" {
 }
 
 variable "ssh_public_key" {
-  description = "SSH public key. Password auth is disabled unconditionally."
+  description = "SSH public key. Password authentication is disabled in all cases."
   type        = string
 }
 

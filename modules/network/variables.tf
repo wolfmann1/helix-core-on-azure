@@ -20,7 +20,7 @@ variable "address_space" {
 }
 
 variable "subnet_prefixes" {
-  description = "CIDR per subnet. The commit/edge/proxy split exists to bound blast radius: proxies face the least-trusted networks, commit the most-trusted."
+  description = "CIDR per subnet. The commit, edge and proxy tiers are separated because proxies face the least trusted networks and the commit server the most trusted."
   type        = map(string)
   default = {
     commit = "10.40.1.0/24"

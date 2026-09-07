@@ -1,8 +1,7 @@
 locals {
   # The same provisioning entry point is used by Azure cloud-init and by the
-  # Hyper-V path in local/hyperv. Anything Azure-specific stays in Terraform;
-  # anything Perforce-specific stays in provisioning/. That boundary is what
-  # makes the local option possible.
+  # Hyper-V path in local/hyperv. Azure-specific configuration stays in
+  # Terraform; Perforce configuration stays in provisioning/.
   provision_args = join(" ", compact([
     "--role ${var.role}",
     "--install-sdp ${var.install_sdp}",
@@ -53,8 +52,8 @@ resource "azurerm_linux_virtual_machine" "this" {
     version   = var.os_image.version
   }
 
-  # System-assigned identity: the node authenticates to Key Vault and blob
-  # storage with no credential ever written into userdata or state.
+  # System-assigned identity, so the node authenticates to Key Vault and blob
+  # storage without a credential in custom_data or Terraform state.
   identity {
     type = "SystemAssigned"
   }

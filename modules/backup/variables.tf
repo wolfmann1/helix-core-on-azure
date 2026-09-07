@@ -20,7 +20,7 @@ variable "checkpoint_account_id" {
   type        = string
 }
 variable "verify_restore_enabled" {
-  description = "Run the scheduled restore-verification job. An unverified backup is not a backup — this is the highest-credibility feature in the repo, keep it on."
+  description = "Run the scheduled restore-verification job, which exercises the restore procedure against current checkpoints. Leave enabled."
   type        = bool
   default     = true
 }

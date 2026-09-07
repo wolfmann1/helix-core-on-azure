@@ -1,5 +1,5 @@
-# Default-deny segmentation. Every allow below is explicit and directional.
-# There are no public IPs on any Perforce host in any environment.
+# Default-deny segmentation. Each rule below is an explicit, directional
+# allow. No Perforce host has a public IP in any environment.
 
 resource "azurerm_virtual_network" "this" {
   name                = "${var.name_prefix}-vnet"

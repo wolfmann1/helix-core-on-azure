@@ -1,91 +1,90 @@
 # helix-core-on-azure
 
-Infrastructure as code for a production-shaped Perforce Helix Core estate —
-commit, edge, proxy, broker, cross-region standby, P4 Code Review and P4 Search —
-deployed through a gated pipeline, with monitoring that watches the things that
-actually take Perforce down.
+Terraform configuration for a Perforce Helix Core estate on Azure: commit
+server, edge servers, proxies, broker, cross-region standby, P4 Code Review and
+P4 Search. Deployed through a GitHub Actions pipeline with an approval gate, and
+monitored with alerts specific to Perforce rather than generic VM metrics.
 
-**This README is a methodology, not a setup guide.** Setup lives in
-[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+Setup instructions are in [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+This file covers the failure modes the design addresses and the reasoning behind
+each choice.
 
 ---
 
-## 1. What actually takes Helix Core down
+## 1. Common Helix Core failure modes
 
-In rough order of how often it happens, not how dramatic it sounds.
+Ordered by how often they occur.
 
-**The journal volume fills.** p4d cannot write the journal, so it stops. This is
-the outage nobody sees coming, because the metadata volume still looks healthy
-and every generic monitoring dashboard is green.
+**The journal volume fills.** p4d cannot write the journal and stops. Generic
+infrastructure monitoring usually misses this, because the metadata volume and
+the OS disk both still look healthy.
 
-**The metadata volume fills.** Worse than the journal case and far slower to
-recover from, because recovery may mean a checkpoint restore rather than freeing
-space and restarting.
+**The metadata volume fills.** Recovery is slower than the journal case, because
+it may require a checkpoint restore rather than freeing space and restarting.
 
-**A checkpoint has been silently failing.** Costs nothing on the day it happens.
-Costs everything on the day you need to restore.
+**Checkpoints have been failing silently.** No impact until a restore is needed,
+at which point the most recent usable checkpoint may be weeks old.
 
-**Nobody has ever tested a restore.** The first restore attempt happens during
-the outage, under time pressure, by someone who has not done it before.
+**No one has tested a restore.** The first attempt happens during an outage,
+under time pressure.
 
-**The replica is further behind than anyone thinks.** The runbook claims an RPO.
-Nothing measures it. The gap is discovered during failover.
+**Replica lag is larger than assumed.** The runbook states an RPO, but nothing
+measures it. The gap becomes visible during failover.
 
-**A lock-holding command stalls everyone.** One `p4 sync` against a huge path,
-and the whole studio is blocked while every dashboard shows normal CPU.
+**A lock-holding command blocks other users.** A single large sync can stall a
+studio while CPU and memory graphs stay flat.
 
-**The licence expires.** Unglamorous. Has taken down more servers than hardware.
+**The licence expires.** Common, and entirely preventable with a countdown
+alert.
 
-## 2. The design decisions that prevent each one
+## 2. Design decisions
 
-**Three separate volumes — `p4db`, `p4logs`, `p4depots`.**
-Metadata, journal/logs, and archive files each get their own disk. A full
-`p4logs` halts the server; if journal shares a volume with metadata, ordinary
-depot growth can take the whole instance down. This one decision addresses the
-first two failure modes above. See `provisioning/common/volumes.sh`.
+**Three separate volumes: `p4db`, `p4logs`, `p4depots`.**
+Metadata, journal and logs, and archive files each get their own disk. A full
+`p4logs` stops the server. If the journal shares a volume with metadata, depot
+or log growth can cause an outage on the metadata volume. Separating them bounds
+each failure and gives each its own alert threshold. Implemented in
+`provisioning/common/volumes.sh`.
 
-**Checkpoint alerting on failure *and* overrun.**
-Not just "did it run" but "did it finish inside its window" — a checkpoint
-that is quietly taking three times as long is a capacity problem announcing
-itself early. See `modules/observability`.
+**Checkpoint alerts on both failure and duration.**
+A checkpoint that still succeeds but now takes three times as long is an early
+capacity signal. See `modules/observability`.
 
 **Scheduled restore verification.**
-A job restores the newest checkpoint into a scratch instance, verifies it, and
-emits a metric. If that metric goes stale, an alert fires. Almost nobody builds
-this. It is the difference between having backups and having recovery. See
+A job restores the most recent checkpoint into a scratch instance, verifies it,
+and emits a metric. An alert fires if that metric goes stale. See
 `modules/backup`.
 
-**Measured replica lag, not assumed.**
-The standby runs journalcopy and the lag is a first-class metric with an alert
-on it. Your RPO becomes a number you can show someone. See `modules/standby`.
+**Replica lag as a measured metric.**
+The standby runs journalcopy and its lag is collected and alerted on, so the RPO
+is a number rather than an estimate. See `modules/standby`.
 
-**A broker in front.**
-Controlled failover and honest read-only maintenance windows, rather than
-"the server is down and nobody knows why." See `modules/broker`.
+**A broker in front of the estate.**
+Supports controlled failover and read-only maintenance windows, and gives users
+a clear message during either. See `modules/broker`.
 
-**Default-deny segmentation, no public IPs, managed identity everywhere.**
+**Default-deny networking, no public IPs, managed identity throughout.**
 No Perforce host has a public IP in any environment. Nodes authenticate to Key
-Vault and blob storage with system-assigned managed identities; the pipeline
-authenticates to Azure with OIDC. There is no long-lived credential anywhere in
-this repository or its state.
+Vault and blob storage using system-assigned managed identities. The pipeline
+authenticates to Azure with OIDC federated credentials. No long-lived credential
+is stored in the repository, in Terraform state, or in cloud-init.
 
 ## 3. Assessing an existing estate
 
-The same questions, in order, for someone else's Perforce environment:
+The same questions applied to someone else's environment:
 
-1. Are metadata, journal and depots on separate volumes? What happens at 100%
-   on each?
-2. When did a checkpoint last succeed? What is the trend in its duration?
+1. Are metadata, journal and depots on separate volumes? What happens when each
+   reaches 100%?
+2. When did a checkpoint last succeed, and how has its duration trended?
 3. When was a restore last performed end to end, by whom, and how long did it
    take?
-4. What is the measured replica lag right now, and what does the runbook claim
-   the RPO is?
-5. Who is paged when p4d stops, and on what signal?
+4. What is the measured replica lag now, and what RPO does the runbook state?
+5. Who is notified when p4d stops, and on what signal?
 6. What is the projected days-to-full on the depot volume?
 7. When does the licence expire?
 
-Questions 3 and 4 separate estates that have a DR plan from estates that have a
-DR document.
+Questions 3 and 4 are usually where documented recovery plans and tested
+recovery plans diverge.
 
 ## 4. What this deploys
 
@@ -93,48 +92,53 @@ DR document.
 |---|---|
 | `network` | VNet, default-deny NSGs, tier segmentation |
 | `storage` | Key Vault, offsite checkpoint blob container |
-| `p4-node` | The VM/disk/identity primitive every role wraps |
-| `commit-server` / `edge-server` / `standby` | Perforce servers, three-volume layout |
+| `p4-node` | VM, disk and identity primitive used by every role |
+| `commit-server` / `edge-server` / `standby` | Perforce servers with the three-volume layout |
 | `proxy` / `broker` | Cache and routing tiers |
 | `swarm` / `p4search` | P4 Code Review, P4 Search |
-| `backup` | Checkpoint offsite copy + restore verification |
-| `observability` | Log Analytics, DCRs, the twelve alerts |
+| `backup` | Checkpoint offsite copy and restore verification |
+| `observability` | Log Analytics, data collection rules, twelve alerts |
 
-Environments: `dev` (one commit server), `stage` (commit + edge + proxy + Swarm),
-`prod` (full topology + cross-region standby). Every VM defaults to the smallest
-SKU that will run its role — this repo optimises for capability, not throughput.
+Environments: `dev` (commit server only), `stage` (commit, edge, proxy, Swarm),
+`prod` (full topology plus cross-region standby). Every VM defaults to the
+smallest SKU that runs its role, since the goal is to exercise the architecture
+rather than serve production load.
 
-A credit-free local option using the same provisioning scripts lives in
+A local Hyper-V option using the same provisioning scripts is documented in
 [`local/hyperv`](local/hyperv/README.md).
 
-## 5. Platform constraints worth knowing
+## 5. Platform constraints
 
-- **OS: Ubuntu 24.04 LTS** (or RHEL/Rocky 9). *Not* Ubuntu 26.04 — P4 Code
-  Review 2026.3 supports Ubuntu 22.04/24.04 LTS, RHEL 8/9 and Rocky 8/9 only,
-  and Swarm support is the binding constraint for the whole estate.
-- **Swarm:** Apache 2.4 **prefork MPM only**, non-threaded PHP 8.2–8.5 (the P4
-  PHP API is not thread-safe), Redis required, Linux only.
-- **P4 Search:** fronts Elasticsearch; Perforce's own small-site floor is
-  4 vCPU / 8 GB RAM *per component*. Off by default here, because that floor
-  fights the minimum-footprint goal.
-- **SDP** is installed by parameter (`install_sdp`), so a plain p4d can be stood
-  up alongside for comparison.
+- **OS: Ubuntu 24.04 LTS**, or RHEL/Rocky 9. Not Ubuntu 26.04. P4 Code Review
+  2026.3 supports Ubuntu 22.04 and 24.04 LTS, RHEL 8 and 9, and Rocky Linux 8
+  and 9. Swarm has the narrowest OS support of any component here, so it sets
+  the choice for the whole estate. `modules/p4-node` validates this at plan
+  time.
+- **Swarm:** Apache 2.4 with the prefork MPM only (worker and event are not
+  supported), non-threaded PHP 8.2–8.5 because the P4 PHP API is not
+  thread-safe, Redis required, Linux only.
+- **P4 Search:** runs against Elasticsearch. Perforce's stated small-site
+  requirement is 4 vCPU and 8 GB RAM per component, which is larger than the
+  whole dev environment, so it is disabled by default and enabled explicitly
+  per environment.
+- **SDP** is installed via the `install_sdp` parameter, so a plain p4d can be
+  deployed alongside for comparison.
 
-Sources: Perforce documentation for
+References: Perforce documentation for
 [P4 Code Review runtime dependencies](https://help.perforce.com/helix-core/helix-swarm/swarm/current/Content/Swarm/setup.dependencies.html)
 and [P4 Search installation requirements](https://help.perforce.com/helix-core/integrations-plugins/p4search/current/Content/P4Search/prereqs-scenarios.html).
 
 ## 6. Working on Windows
 
-Every script has a PowerShell counterpart; the bash versions exist because the
-GitHub Actions runners are Linux.
+Each script has a PowerShell version. The bash versions exist because the GitHub
+Actions runners are Linux.
 
 | Task | PowerShell | bash / CI |
 |---|---|---|
 | Install pinned tooling | `.\scripts\setup-env.ps1` | `./scripts/setup-env.sh` |
 | Pre-commit checks | `.\scripts\ci-checks.ps1` | `./scripts/ci-checks.sh` |
 | Destroy an environment | `.\scripts\teardown.ps1 -Environment dev` | `./scripts/teardown.sh dev` |
-| Build the local lab | `.\local\hyperv\New-P4Lab.ps1` | — (Hyper-V is Windows-only) |
+| Build the local lab | `.\local\hyperv\New-P4Lab.ps1` | Hyper-V is Windows only |
 
-The pairs run the same sequence against the same `dependencies.txt`. Keep them
-in step when you change either.
+Both versions run the same checks against the same `dependencies.txt`. Update
+them together.

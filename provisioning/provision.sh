@@ -6,9 +6,9 @@
 #   - Hyper-V : via local/hyperv/New-P4Lab.ps1 over SSH after first boot
 #   - bare VM : by hand, for testing
 #
-# This separation is deliberate. Terraform creates infrastructure; these
-# scripts configure it. Anything that knows about Azure belongs in the
-# modules, not here — that is what makes the Hyper-V path possible.
+# Terraform creates infrastructure; these scripts configure it. Nothing here
+# should reference Azure concepts, which is what allows the Hyper-V path to
+# reuse these scripts unchanged.
 #
 # Usage:
 #   provision.sh --role commit --install-sdp true --p4port 1666 --sdp-instance 1

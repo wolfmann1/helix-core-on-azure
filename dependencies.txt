@@ -10,8 +10,7 @@
 #   apt        -> Debian/Ubuntu package manager
 #   pip        -> Python package index
 #
-# Pin every version. An unpinned toolchain is not reproducible, and
-# "works on my machine" is the problem this repo exists to solve.
+# Pin every version so the toolchain is reproducible across machines and CI.
 
 terraform  | 1.13.3   | hashicorp                          | terraform version
 tflint     | 0.59.1   | github:terraform-linters/tflint    | tflint --version

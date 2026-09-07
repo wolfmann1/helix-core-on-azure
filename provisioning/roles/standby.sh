@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # standby.sh — cross-region standby replica running journalcopy.
-# This role is the technical spine of the DR audit: it is what turns a
-# claimed RPO into a measured one.
+# Its replication lag is collected by modules/observability, which is what
+# makes the RPO a measured value rather than an estimate.
 set -euo pipefail
 : "${COMMIT_HOST:?--commit-host required}" "${SDP_INSTANCE:=1}"
 echo "[standby] targeting $COMMIT_HOST"

@@ -5,8 +5,8 @@ set -euo pipefail
 
 echo "[commit] configuring instance $SDP_INSTANCE on port $P4PORT"
 
-# Structured logs from first boot. Without these the observability module in
-# this repo has nothing useful to read, and post-incident review is guesswork.
+# Structured logs from first boot. modules/observability reads these; without
+# them there is little to review after an incident.
 CFG=(
   "serverlog.file.3=/p4logs/commands.csv"
   "serverlog.retain.3=7"
@@ -21,9 +21,9 @@ CFG=(
 )
 mkdir -p /p4logs/checkpoints
 
-# TODO(chris): apply with `p4 configure set` once p4d is up and a super user
-# ticket is available from Key Vault. Written here as data, not executed, so
-# the intent is reviewable in a pull request.
+# TODO(chris): apply with `p4 configure set` once p4d is running and a super
+# user ticket is available from Key Vault. Written as data rather than
+# executed so the settings are reviewable in a pull request.
 printf '%s\n' "${CFG[@]}" > /p4logs/desired-configurables.txt
 
 systemctl enable --now "p4d_${SDP_INSTANCE}" 2>/dev/null || \

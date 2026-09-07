@@ -1,14 +1,13 @@
 # Local Hyper-V lab
 
-The credit-free option. Same provisioning scripts, no Azure spend.
+Runs the same estate locally, without Azure spend.
 
-This exists because the Azure/Hyper-V split was designed in from the start:
-Terraform creates **infrastructure**, `provisioning/` creates **configuration**,
-and nothing in `provisioning/` knows what a resource group is. Hyper-V therefore
-reuses `provisioning/provision.sh` verbatim — the same commit server, the same
-three-volume split, the same SDP parameter.
+Terraform creates infrastructure and `provisioning/` configures it, and nothing
+under `provisioning/` references Azure. Hyper-V therefore reuses
+`provisioning/provision.sh` unchanged: the same commit server, the same
+three-volume layout, the same SDP parameter.
 
-## What you get
+## What it builds
 
 | VM | vCPU | RAM | Disks |
 |---|---|---|---|
@@ -17,30 +16,30 @@ three-volume split, the same SDP parameter.
 | p4-proxy-01 (optional) | 1 | 2 GB | os 32G, p4depots 32G |
 | p4-swarm-01 (optional) | 2 | 4 GB | os 32G |
 
-Roughly 20 GB RAM if you run everything; the commit server alone runs in 4.
+Around 20 GB of RAM to run everything; the commit server alone runs in 4.
 
-## Use it when
+## When to use the local lab
 
-- Iterating on `provisioning/` — the feedback loop is seconds, not minutes,
-  and it costs nothing
+- Iterating on `provisioning/`, where the feedback loop is seconds rather than
+  minutes and costs nothing
 - Practising checkpoint restore and failover repeatedly
-- Azure credits are running low
+- When Azure credits are limited
 
-## Use Azure when
+## When to use Azure
 
-- You need the managed identity / Key Vault / OIDC story, which is most of
-  what the job postings are asking about
-- You are exercising cross-region standby, which needs two regions
-- You are producing evidence for the portfolio
+- Exercising managed identity, Key Vault and OIDC, which is most of what the
+  job postings ask about
+- Cross-region standby, which needs two regions
+- Producing evidence for the portfolio
 
-## Choosing on-demand vs always-on
+## On-demand versus always-on
 
-You do not have to decide globally. The split that works:
+The split that works in practice:
 
-- **Always on, locally:** the Hyper-V commit server. Free, and it is where you
-  develop.
+- **Always on, locally:** the Hyper-V commit server. No cost, and it is where
+  development happens.
 - **On demand, in Azure:** `envs/stage` and `envs/prod`. Apply, capture the
-  evidence (screenshots, plan output, alert firing, a failover drill), destroy.
-  `scripts/teardown.sh` exists for exactly this.
+  evidence (alert screenshots, plan output, failover timings), then destroy with
+  `scripts/teardown.ps1`.
 
-That keeps credits for the things only Azure can prove.
+This keeps credits available for the things only Azure demonstrates.

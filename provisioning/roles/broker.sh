@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# broker.sh — P4Broker. This is what makes controlled failover and
-# read-only maintenance windows possible, which is why it is in the repo
-# even though a lab could run without it.
+# broker.sh — P4Broker. Provides controlled failover and read-only
+# maintenance windows. Included even though a lab would run without it.
 set -euo pipefail
 : "${COMMIT_HOST:?--commit-host required}" "${P4PORT:=1666}"
 mkdir -p /etc/perforce

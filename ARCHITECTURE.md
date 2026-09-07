@@ -22,64 +22,68 @@
                   └─────────┘              └────────────┘
 ```
 
-## The decisions, and why
+## Decisions
 
-### Three volumes, not one
-`p4db` (metadata), `p4logs` (journal + structured logs), `p4depots` (archive).
+### Three volumes rather than one
 
-Stock SDP names these `/hxmetadata`, `/hxlogs`, `/hxdepots`. This repo mounts
-`p4db`/`p4logs`/`p4depots` and symlinks the SDP paths onto them, so SDP tooling
-runs unmodified while the volume names say what they hold.
+`p4db` holds metadata, `p4logs` holds the journal and structured logs, and
+`p4depots` holds archive files.
 
-Rationale: a full `p4logs` stops the server outright, because the journal cannot
-be written. If the journal shares a volume with metadata, routine depot or log
-growth becomes an availability incident. Separating them means each failure is
-bounded and each has its own alert.
+SDP expects these at `/hxmetadata`, `/hxlogs` and `/hxdepots`. This repository
+mounts the `p4*` names and symlinks the SDP paths onto them, so SDP tooling runs
+unmodified while the mount points describe their contents.
 
-Disk caching differs per volume — `ReadOnly` host caching on `p4db`, `None` on
-`p4logs` and `p4depots`. Write-heavy sequential journal I/O gains nothing from
-host cache and can be hurt by it.
+The reason for the split: a full `p4logs` stops p4d, because the journal cannot
+be written. If the journal shares a volume with metadata, ordinary depot or log
+growth becomes an availability incident. Separate volumes keep each failure
+contained and allow separate alert thresholds.
 
-### An edge has its own metadata
-That is what an edge *is*. The `edge-server` module therefore attaches its own
-`p4db`; sharing commit's would defeat the purpose. A proxy, by contrast, caches
-file content only and gets one volume.
+Host caching differs per volume. `p4db` uses ReadOnly caching; `p4logs` and
+`p4depots` use none. Sequential journal writes gain nothing from host cache and
+can be slowed by it.
 
-### Terraform creates infrastructure; `provisioning/` creates configuration
-Nothing under `provisioning/` knows what a resource group is. That boundary is
-not tidiness — it is what makes `local/hyperv` possible. The same
-`provision.sh --role commit --install-sdp true` runs on an Azure VM via
-cloud-init and on a Hyper-V guest over SSH, and produces the same server.
+### An edge server has its own metadata
 
-### Role modules are thin wrappers over `p4-node`
-`p4-node` owns VM, disks, managed identity and provisioning wiring.
+That is the defining characteristic of an edge server, so the `edge-server`
+module attaches its own `p4db` volume rather than sharing the commit server's. A
+proxy caches file content only and gets a single volume.
+
+### Terraform creates infrastructure, `provisioning/` configures it
+
+Nothing under `provisioning/` references Azure concepts. That separation is what
+allows the Hyper-V path to work: the same
+`provision.sh --role commit --install-sdp true` runs on an Azure VM through
+cloud-init and on a Hyper-V guest over SSH, producing the same server.
+
+### Role modules wrap a shared primitive
+
+`p4-node` owns the VM, disks, managed identity and provisioning wiring. The
 `commit-server`, `edge-server`, `proxy`, `broker`, `standby`, `swarm` and
-`p4search` each supply that primitive with the role's opinionated defaults —
-principally which data disks exist. Adding a role is a twenty-line module.
+`p4search` modules supply it with role-specific defaults, mainly which data
+disks exist. Adding a new role takes about twenty lines.
 
-### No credentials, anywhere
+### No stored credentials
+
 Nodes use system-assigned managed identities to read Key Vault and write
-checkpoints to blob. The pipeline uses OIDC federated credentials rather than a
-service principal secret. The state account has `shared_access_key_enabled =
-false`, forcing Entra ID auth. There is no long-lived secret in the repo, in
-state, or in cloud-init.
+checkpoints to blob storage. The pipeline uses OIDC federated credentials rather
+than a service principal secret. The state storage account sets
+`shared_access_key_enabled = false`, requiring Entra ID authentication. Nothing
+long-lived is written to the repository, to state, or to cloud-init.
 
 ### One state file per environment
-Not one global state. A `dev` mistake cannot corrupt `prod` state, and plan
-times stay short.
 
-## Deliberate non-goals
+A mistake in `dev` cannot corrupt `prod` state, and plan times stay short.
 
-Stated out loud, because a defended scoping decision reads as judgement while a
-silent omission reads as a gap.
+## Scope exclusions
 
-- **No Kubernetes.** p4d is a stateful service with hard storage-latency
-  requirements. Containerising the commit server is not the industry norm and
-  claiming otherwise would be posturing. The proxy tier is the only part of this
-  estate where containers would genuinely help.
-- **No multi-cloud.** Azure plus a local Hyper-V option. Depth over breadth.
-- **No Windows Perforce hosts.** Linux SDP only. Swarm does not support Windows
-  at all, and adding a second OS family doubles the provisioning surface while
-  proving nothing new.
-- **P4 Search off by default.** Its floor is 4 vCPU / 8 GB per component, which
-  is larger than the entire dev environment.
+These are deliberate, and documented so they are not mistaken for oversights.
+
+- **Kubernetes.** p4d is stateful with strict storage latency requirements, and
+  containerising the commit server is not common practice. The proxy tier is the
+  only part of this estate where containers would offer a clear benefit.
+- **Multi-cloud.** Azure only, plus a local Hyper-V option.
+- **Windows Perforce hosts.** Linux SDP only. Swarm does not support Windows,
+  and a second OS family would double the provisioning surface without
+  demonstrating anything new.
+- **P4 Search enabled by default.** Its requirement of 4 vCPU and 8 GB RAM per
+  component exceeds the size of the entire dev environment.

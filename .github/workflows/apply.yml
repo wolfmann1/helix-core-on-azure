@@ -20,10 +20,8 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    # The gate. `stage` and `prod` are GitHub Environments with required
-    # reviewers configured; the run pauses here until a human approves.
-    # This is the difference between a pipeline that deploys and a pipeline
-    # that controls change.
+    # `stage` and `prod` are GitHub Environments with required reviewers, so
+    # the run pauses here until someone approves it.
     environment: ${{ inputs.environment || 'dev' }}
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +36,8 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Re-plan
-        # Never apply a stale plan. Re-planning at apply time is what catches
-        # drift introduced between review and merge.
+        # Re-plan at apply time rather than applying a stored plan, so drift
+        # introduced between review and merge is caught.
         run: |
           ENV=${{ inputs.environment || 'dev' }}
           terraform -chdir=envs/$ENV init

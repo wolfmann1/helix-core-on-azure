@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # volumes.sh <role> — mount and label the three-volume split.
 #
-# The split is the single most defensible design decision in this repo:
-#   p4logs full  -> the journal cannot be written -> p4d halts.
-#   p4db full    -> worst outage on the list, slowest recovery.
-# Sharing them means depot or log growth can take down the whole instance.
+# Why the volumes are split:
+#   p4logs full -> the journal cannot be written -> p4d stops.
+#   p4db full   -> recovery may require a checkpoint restore.
+# Sharing them means depot or log growth can cause an outage on metadata.
 #
 # Stock SDP expects /hxmetadata, /hxlogs, /hxdepots. We mount our names and
 # symlink the SDP paths onto them, so SDP tooling keeps working unmodified.
@@ -35,8 +35,8 @@ case "$ROLE" in
     ln -sfn /p4depots /hxdepots
     ;;
   proxy)
-    # A proxy caches file content only. It holds no metadata, so it gets one
-    # cache volume and nothing else.
+    # A proxy caches file content only and holds no metadata, so it gets a
+    # single cache volume.
     mount_one p4depots /p4depots
     ln -sfn /p4depots /hxdepots
     ;;

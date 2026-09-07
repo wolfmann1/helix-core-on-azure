@@ -3,10 +3,9 @@
   PowerShell counterpart to ci-checks.sh — fmt, validate, lint and scan.
 
 .DESCRIPTION
-  Runs the same sequence the pipeline runs, so a failure here is a failure
-  there. GitHub Actions uses the .sh version because its runners are Linux;
-  this is the local loop on Windows. If you change one, change both — a
-  divergence between them is worse than having only one.
+  Runs the same sequence as the pipeline, so a failure here predicts a failure
+  in CI. GitHub Actions uses the .sh version because its runners are Linux;
+  this is the local equivalent on Windows. Update both when changing either.
 
 .PARAMETER Environment
   Which envs/<name> to validate and plan. Defaults to dev.

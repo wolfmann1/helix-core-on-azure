@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# ci-checks.sh <env> — everything the pipeline runs before a plan.
-# Deliberately a script rather than steps inline in workflow YAML, so the
-# GitLab pipeline planned for a later iteration reuses it verbatim.
+# ci-checks.sh <env> — the checks the pipeline runs before a plan.
+# Kept in a script rather than inline workflow YAML so the GitLab pipeline
+# planned for a later iteration can reuse it unchanged.
 set -euo pipefail
 ENVIRONMENT="${1:?environment required}"
 cd "$(dirname "$0")/.."
