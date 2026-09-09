@@ -208,8 +208,17 @@ az ad sp delete --id <objectId from the error>
 ```
 
 `displayName` should match the VM name and `servicePrincipalType` should be
-`ManagedIdentity`. Entra clears these up on its own eventually, and renaming the
-VM also avoids the collision, but deleting the orphan is the direct fix.
+`ManagedIdentity`.
+
+**This usually fails with "Insufficient privileges to complete the operation",
+and that is not a missing directory role.** Managed-identity service principals
+are owned by the resource provider, not by the directory, so Entra rejects
+direct deletion regardless of what roles you hold. Entra clears them up on its
+own eventually.
+
+The reliable fix is to not collide in the first place, which is why node names
+include a region code -- see ARCHITECTURE.md. If you hit this on an existing
+deployment, changing the node name is the way through.
 
 This is worth knowing before a region migration of anything using managed
 identities: the identity is a directory object with its own lifecycle, and it

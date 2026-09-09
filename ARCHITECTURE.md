@@ -110,6 +110,24 @@ than a service principal secret. The state storage account sets
 `shared_access_key_enabled = false`, requiring Entra ID authentication. Nothing
 long-lived is written to the repository, to state, or to cloud-init.
 
+### Node names carry the region
+
+Nodes are named `p4-<env>-<region code>-<role>-<nn>`, for example
+`p4-dev-cae-commit-01`. The codes are in a map in each environment's `locals`.
+
+The reason is managed identities. A VM's system-assigned identity is a service
+principal in Entra ID stamped with the VM's region, and it outlives the VM.
+Recreating a VM with the same resource ID -- same subscription, resource group
+and name -- in a different region fails with
+`AlreadyExistServicePrincipalInDifferentRegion`, and that principal cannot be
+deleted directly because the resource provider owns it rather than the
+directory administrator. Including the region keeps resource IDs distinct per
+region, so a region change never collides.
+
+It also makes the prod topology readable: the commit server is
+`p4-prod-cae-commit-01` and its standby is `p4-prod-wus2-standby-01`, so which
+side of a failover you are looking at is visible in the name.
+
 ### Key Vault uses RBAC, and access is granted by an explicit flag
 
 The vault sets `rbac_authorization_enabled = true`, so node identities are

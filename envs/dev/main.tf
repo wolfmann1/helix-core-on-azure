@@ -25,6 +25,25 @@ provider "azurerm" {
 locals {
   prefix = "p4-dev"
   tags   = { environment = "dev", project = "helix-core-on-azure", owner = "chris" }
+
+  # Short region codes, used in node names.
+  #
+  # A VM's system-assigned identity is a service principal in Entra ID stamped
+  # with the VM's region, and it outlives the VM. Recreating a VM with the same
+  # resource ID in a different region fails with
+  # AlreadyExistServicePrincipalInDifferentRegion, and the principal cannot be
+  # deleted directly because the resource provider owns it. Putting the region
+  # in the name keeps resource IDs distinct per region, so a region move never
+  # collides.
+  region_code = {
+    canadacentral = "cac"
+    canadaeast    = "cae"
+    westus2       = "wus2"
+    westus3       = "wus3"
+    eastus2       = "eus2"
+  }
+  loc    = lookup(local.region_code, var.location, var.location)
+  dr_loc = var.dr_location == "" ? "" : lookup(local.region_code, var.dr_location, var.dr_location)
 }
 
 resource "azurerm_resource_group" "this" {
@@ -52,7 +71,7 @@ module "storage" {
 
 module "commit" {
   source               = "../../modules/commit-server"
-  name                 = "${local.prefix}-commit-01"
+  name                 = "${local.prefix}-${local.loc}-commit-01"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["commit"]

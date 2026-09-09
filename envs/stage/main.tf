@@ -25,6 +25,25 @@ provider "azurerm" {
 locals {
   prefix = "p4-stage"
   tags   = { environment = "stage", project = "helix-core-on-azure", owner = "chris" }
+
+  # Short region codes, used in node names.
+  #
+  # A VM's system-assigned identity is a service principal in Entra ID stamped
+  # with the VM's region, and it outlives the VM. Recreating a VM with the same
+  # resource ID in a different region fails with
+  # AlreadyExistServicePrincipalInDifferentRegion, and the principal cannot be
+  # deleted directly because the resource provider owns it. Putting the region
+  # in the name keeps resource IDs distinct per region, so a region move never
+  # collides.
+  region_code = {
+    canadacentral = "cac"
+    canadaeast    = "cae"
+    westus2       = "wus2"
+    westus3       = "wus3"
+    eastus2       = "eus2"
+  }
+  loc    = lookup(local.region_code, var.location, var.location)
+  dr_loc = var.dr_location == "" ? "" : lookup(local.region_code, var.dr_location, var.dr_location)
 }
 
 resource "azurerm_resource_group" "this" {
@@ -52,7 +71,7 @@ module "storage" {
 
 module "commit" {
   source               = "../../modules/commit-server"
-  name                 = "${local.prefix}-commit-01"
+  name                 = "${local.prefix}-${local.loc}-commit-01"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["commit"]
@@ -84,7 +103,7 @@ module "observability" {
 module "edge" {
   source               = "../../modules/edge-server"
   count                = var.edge_count
-  name                 = "${local.prefix}-edge-${format("%02d", count.index + 1)}"
+  name                 = "${local.prefix}-${local.loc}-edge-${format("%02d", count.index + 1)}"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["edge"]
@@ -106,7 +125,7 @@ module "edge" {
 module "proxy" {
   source               = "../../modules/proxy"
   for_each             = var.proxy_sites
-  name                 = "${local.prefix}-proxy-${each.key}"
+  name                 = "${local.prefix}-${local.loc}-proxy-${each.key}"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["proxy"]
@@ -125,7 +144,7 @@ module "proxy" {
 
 module "broker" {
   source               = "../../modules/broker"
-  name                 = "${local.prefix}-broker-01"
+  name                 = "${local.prefix}-${local.loc}-broker-01"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["app"]
@@ -145,7 +164,7 @@ module "broker" {
 module "swarm" {
   source               = "../../modules/swarm"
   count                = var.enable_swarm ? 1 : 0
-  name                 = "${local.prefix}-swarm-01"
+  name                 = "${local.prefix}-${local.loc}-swarm-01"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["app"]
@@ -167,7 +186,7 @@ module "swarm" {
 module "p4search" {
   source               = "../../modules/p4search"
   count                = var.enable_p4search ? 1 : 0
-  name                 = "${local.prefix}-search-01"
+  name                 = "${local.prefix}-${local.loc}-search-01"
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["app"]
