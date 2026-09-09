@@ -1,4 +1,4 @@
-location       = "canadacentral"
+location       = "canadaeast"
 alert_email    = "clesemann@gmail.com"
 ssh_public_key = "ssh-ed25519 REPLACE_ME"
 edge_count     = 1

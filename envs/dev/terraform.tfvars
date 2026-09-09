@@ -1,4 +1,4 @@
-location       = "canadacentral"
+location       = "canadaeast"
 alert_email    = "clesemann@gmail.com"
 ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKPVLh9iBBzprRNCe+JzTc4OAk8ZQbMlwaPO8vH+9Kmd juwel@cl-gaming-pc"
 install_sdp    = true
@@ -29,8 +29,11 @@ serverlocks_tmpfs_mb = 1024  # server.locks in RAM; 0 to skip
 # as having capacity, and capacity varies by region, zone and subscription type.
 # Check what is actually deployable before changing this:
 #   az vm list-skus --location canadacentral --size Standard_B --all -o table
-# Checked 2026-09-09: every x86 B-series size is NotAvailableForSubscription in
-# canadacentral. The only unrestricted sizes are Standard_B*p* (ARM64/Ampere),
-# which cannot run p4d -- Perforce publishes no arm64 packages. So this
-# environment needs either a different region or a different SKU family.
-# vm_size = "Standard_B2s"        # B v1, x86, retires 2028-11-15
+# Region checked 2026-09-09. On this subscription canadacentral has no x86
+# capacity at all: every x86 B-series and D-series size is
+# NotAvailableForSubscription, leaving only Standard_B*p* / D*p* (ARM64) and
+# confidential-compute sizes. ARM cannot run p4d because Perforce publishes no
+# arm64 packages, so canadacentral is unusable for this estate.
+#
+# canadaeast has the x86 B-series v2 sizes unrestricted, so that is the region
+# used here. Both regions are permitted by the az104-lab guardrails.
