@@ -41,22 +41,22 @@ module "storage" {
 }
 
 module "commit" {
-  source              = "../../modules/commit-server"
-  name                = "${local.prefix}-commit-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["commit"]
-  vm_size             = "Standard_B2s"
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = var.install_sdp
-  key_vault_id        = module.storage.key_vault_id
+  source               = "../../modules/commit-server"
+  name                 = "${local.prefix}-commit-01"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["commit"]
+  vm_size              = "Standard_B2s"
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = var.install_sdp
+  key_vault_id         = module.storage.key_vault_id
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = local.tags
+  tags                 = local.tags
 }
 
 module "observability" {
@@ -71,104 +71,104 @@ module "observability" {
 # ---- optional tiers, driven by tfvars -------------------------------------
 
 module "edge" {
-  source              = "../../modules/edge-server"
-  count               = var.edge_count
-  name                = "${local.prefix}-edge-${format("%02d", count.index + 1)}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["edge"]
-  vm_size             = "Standard_B2s"
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = var.install_sdp
-  commit_host         = module.commit.private_ip
-  key_vault_id        = module.storage.key_vault_id
+  source               = "../../modules/edge-server"
+  count                = var.edge_count
+  name                 = "${local.prefix}-edge-${format("%02d", count.index + 1)}"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["edge"]
+  vm_size              = "Standard_B2s"
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = var.install_sdp
+  commit_host          = module.commit.private_ip
+  key_vault_id         = module.storage.key_vault_id
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = local.tags
+  tags                 = local.tags
 }
 
 module "proxy" {
-  source              = "../../modules/proxy"
-  for_each            = var.proxy_sites
-  name                = "${local.prefix}-proxy-${each.key}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["proxy"]
-  vm_size             = each.value.vm_size
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = false
-  commit_host         = module.commit.private_ip
+  source               = "../../modules/proxy"
+  for_each             = var.proxy_sites
+  name                 = "${local.prefix}-proxy-${each.key}"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["proxy"]
+  vm_size              = each.value.vm_size
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = false
+  commit_host          = module.commit.private_ip
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = merge(local.tags, { site = each.key })
+  tags                 = merge(local.tags, { site = each.key })
 }
 
 module "broker" {
-  source              = "../../modules/broker"
-  name                = "${local.prefix}-broker-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["app"]
-  vm_size             = "Standard_B1s"
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = false
-  commit_host         = module.commit.private_ip
+  source               = "../../modules/broker"
+  name                 = "${local.prefix}-broker-01"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["app"]
+  vm_size              = "Standard_B1s"
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = false
+  commit_host          = module.commit.private_ip
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = local.tags
+  tags                 = local.tags
 }
 
 module "swarm" {
-  source              = "../../modules/swarm"
-  count               = var.enable_swarm ? 1 : 0
-  name                = "${local.prefix}-swarm-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["app"]
-  vm_size             = "Standard_B2s"
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = false
-  commit_host         = module.commit.private_ip
-  key_vault_id        = module.storage.key_vault_id
+  source               = "../../modules/swarm"
+  count                = var.enable_swarm ? 1 : 0
+  name                 = "${local.prefix}-swarm-01"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["app"]
+  vm_size              = "Standard_B2s"
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = false
+  commit_host          = module.commit.private_ip
+  key_vault_id         = module.storage.key_vault_id
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = local.tags
+  tags                 = local.tags
 }
 
 module "p4search" {
-  source              = "../../modules/p4search"
-  count               = var.enable_p4search ? 1 : 0
-  name                = "${local.prefix}-search-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["app"]
-  vm_size             = var.p4search_vm_size
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = false
-  commit_host         = module.commit.private_ip
+  source               = "../../modules/p4search"
+  count                = var.enable_p4search ? 1 : 0
+  name                 = "${local.prefix}-search-01"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["app"]
+  vm_size              = var.p4search_vm_size
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = false
+  commit_host          = module.commit.private_ip
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = local.tags
+  tags                 = local.tags
 }
 
 module "backup" {
@@ -210,21 +210,21 @@ module "network_dr" {
 }
 
 module "standby" {
-  source              = "../../modules/standby"
-  count               = var.enable_standby ? 1 : 0
-  name                = "${local.prefix}-standby-01"
-  location            = var.dr_location
-  resource_group_name = azurerm_resource_group.dr[0].name
-  subnet_id           = module.network_dr[0].subnet_ids["commit"]
-  vm_size             = "Standard_B2s"
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = var.install_sdp
-  commit_host         = module.commit.private_ip
+  source               = "../../modules/standby"
+  count                = var.enable_standby ? 1 : 0
+  name                 = "${local.prefix}-standby-01"
+  location             = var.dr_location
+  resource_group_name  = azurerm_resource_group.dr[0].name
+  subnet_id            = module.network_dr[0].subnet_ids["commit"]
+  vm_size              = "Standard_B2s"
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = var.install_sdp
+  commit_host          = module.commit.private_ip
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = merge(local.tags, { role = "dr" })
+  tags                 = merge(local.tags, { role = "dr" })
 }

@@ -18,6 +18,20 @@ bash, WSL or CI:
 
 Versions are pinned in `dependencies.txt`. Both scripts read the same file.
 
+On Windows the script tries winget first and falls back to downloading the
+release asset into `.\.tools\bin`. winget packages are signed, which matters on
+a machine running Smart App Control or WDAC: those policies block unsigned
+executables, including loose binaries from a release page and the `pip.exe`
+shim.
+
+`checkov` has no signed Windows installer. Where an Application Control policy
+is active it cannot be installed locally at all, and `ci-checks.ps1` skips the
+scan step with a note. The pipeline runs checkov on Linux, so the scan still
+happens on every pull request.
+
+`.\scripts\setup-env.ps1 -Diagnose` reports whether such a policy is active and
+where each tool resolves from.
+
 ## 1. Azure prerequisites
 
 These are manual steps, not managed by Terraform.

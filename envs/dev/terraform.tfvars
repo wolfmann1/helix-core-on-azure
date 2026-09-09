@@ -20,6 +20,6 @@ disk_tier = "standard"
 #   p4db 2, p4db2 2, p4logs 2, p4depots 5, p4 1, p4ckps 1  (GiB)
 disk_sizes_gb = {}
 
-split_metadata       = true   # p4db + p4db2; false gives one shared metadata disk
-separate_sdp_volumes = false  # true adds /p4 and /p4ckps as their own volumes
-serverlocks_tmpfs_mb = 1024   # server.locks in RAM; 0 to skip
+split_metadata       = true  # p4db + p4db2; false gives one shared metadata disk
+separate_sdp_volumes = false # true adds /p4 and /p4ckps as their own volumes
+serverlocks_tmpfs_mb = 1024  # server.locks in RAM; 0 to skip

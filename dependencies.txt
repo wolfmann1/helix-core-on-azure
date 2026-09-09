@@ -1,20 +1,34 @@
-# dependencies.txt — consumed by scripts/setup-env.sh (Linux/WSL) and
-# scripts/setup-env.ps1 (Windows). One tool per line.
+# dependencies.txt — read by scripts/setup-env.ps1 and scripts/setup-env.sh.
 #
-#   name | version | source          | verify-command
+#   name | version | winget-id | github-repo | verify-command
 #
-# source values:
-#   hashicorp  -> releases.hashicorp.com
-#   github     -> github.com releases (owner/repo in the version field's suffix)
-#   winget     -> Windows package manager
-#   apt        -> Debian/Ubuntu package manager
-#   pip        -> Python package index
+# winget-id     package id for Windows. "-" means no winget package.
+# github-repo   owner/repo for the release download, used on Linux and as the
+#               Windows fallback when winget has no package or fails. "-" means
+#               the tool is not distributed that way.
+# verify-command  run to test whether the tool is already present and working.
+#
+# Asset filenames are tool-specific and live in the scripts, not here: this
+# file records what is needed, the scripts record how to get it.
 #
 # Pin every version so the toolchain is reproducible across machines and CI.
+# "latest" is only acceptable where the vendor does not publish pinned
+# installers through the package manager.
+#
+# On Windows, winget is tried first. Its packages are signed, which matters on
+# machines running Smart App Control or WDAC — those policies block unsigned
+# executables, including loose binaries pulled from a release page and the
+# pip.exe shim.
 
-terraform  | 1.13.3   | hashicorp                          | terraform version
-tflint     | 0.59.1   | github:terraform-linters/tflint    | tflint --version
-checkov    | 3.2.477  | pip                                | checkov --version
-azure-cli  | latest   | winget:Microsoft.AzureCLI          | az version
-gh         | 2.83.0   | github:cli/cli                     | gh --version
-jq         | 1.8.1    | github:jqlang/jq                   | jq --version
+terraform  | 1.13.3  | Hashicorp.Terraform      | hashicorp/terraform      | terraform version
+tflint     | 0.59.1  | TerraformLinters.tflint  | terraform-linters/tflint | tflint --version
+azure-cli  | latest  | Microsoft.AzureCLI       | -                        | az version
+gh         | 2.83.0  | GitHub.cli               | cli/cli                  | gh --version
+jq         | 1.8.1   | jqlang.jq                | jqlang/jq                | jq --version
+
+# checkov is a Python package with no signed Windows installer. On a machine
+# with an Application Control policy the pip shim is blocked, and there is no
+# supported way around that from a script. It is optional locally; the pipeline
+# runs it on Linux where the policy does not apply. See scripts/setup-env.ps1
+# for the fallbacks attempted.
+checkov    | 3.2.477 | -                        | -                        | checkov --version

@@ -41,22 +41,22 @@ module "storage" {
 }
 
 module "commit" {
-  source              = "../../modules/commit-server"
-  name                = "${local.prefix}-commit-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = module.network.subnet_ids["commit"]
-  vm_size             = "Standard_B2s"
-  ssh_public_key      = var.ssh_public_key
-  install_sdp         = var.install_sdp
-  key_vault_id        = module.storage.key_vault_id
+  source               = "../../modules/commit-server"
+  name                 = "${local.prefix}-commit-01"
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.this.name
+  subnet_id            = module.network.subnet_ids["commit"]
+  vm_size              = "Standard_B2s"
+  ssh_public_key       = var.ssh_public_key
+  install_sdp          = var.install_sdp
+  key_vault_id         = module.storage.key_vault_id
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
   separate_sdp_volumes = var.separate_sdp_volumes
   serverlocks_tmpfs_mb = var.serverlocks_tmpfs_mb
   zone                 = var.zone
-  tags                = local.tags
+  tags                 = local.tags
 }
 
 module "observability" {

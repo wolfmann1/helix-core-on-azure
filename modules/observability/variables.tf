@@ -27,12 +27,12 @@ variable "log_retention_days" {
 variable "thresholds" {
   description = "Alert thresholds. Defaults come from what actually predicts a Perforce outage, not from generic infrastructure monitoring."
   type = object({
-    volume_free_pct_warn  = number
-    volume_free_pct_page  = number
-    replica_lag_seconds   = number
-    submit_p95_seconds    = number
-    blocked_command_secs  = number
-    license_expiry_days   = number
+    volume_free_pct_warn      = number
+    volume_free_pct_page      = number
+    replica_lag_seconds       = number
+    submit_p95_seconds        = number
+    blocked_command_secs      = number
+    license_expiry_days       = number
     restore_verify_stale_days = number
   })
   default = {

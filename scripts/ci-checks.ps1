@@ -92,10 +92,17 @@ try {
     } -ContinueOnError
   }
 
-  if (-not $SkipScan -and (Test-Tool checkov)) {
+  # checkov is optional locally. It has no signed Windows installer, so on a
+  # machine with an Application Control policy it cannot be installed at all.
+  # The pipeline runs it on Linux, so skipping here does not skip it entirely.
+  if (-not $SkipScan -and (Get-Command checkov -ErrorAction SilentlyContinue)) {
     Invoke-Step 'checkov' {
       checkov -d . --framework terraform --quiet --compact --soft-fail-on LOW
     } -ContinueOnError
+  } elseif (-not $SkipScan) {
+    Write-Host ""
+    Write-Host "== checkov" -ForegroundColor Cyan
+    Write-Host "   skipped: not installed. The pipeline runs it on Linux." -ForegroundColor DarkGray
   }
 }
 finally {
