@@ -2,14 +2,13 @@
 # Every VM here is the smallest SKU that will actually run its role. The point
 # is to prove the architecture and exercise a real failover, not to serve load.
 location        = "canadaeast"
-# TODO(chris): the cross-region standby needs a second region that can host
-# x86 VMs. canadacentral cannot on this subscription, so the two regions the
-# guardrails permit are no longer enough for a DR demonstration. Either widen
-# allowedLocations in az104-lab/guardrails.bicep to a third region after
-# checking it with az vm list-skus, or accept that failover cannot be exercised
-# here. Left pointing at canadacentral so a prod apply fails loudly rather than
-# deploying a standby that cannot be created.
-dr_location     = "canadacentral"
+# canadacentral has no x86 capacity on this subscription, so the standby cannot
+# live there. westus2 was added to allowedLocations in az104-lab/guardrails.bicep
+# for this. Verify capacity before a prod apply:
+#   az vm list-skus --location westus2 --size Standard_B --all -o table
+# Note this puts the DR copy in the US. Fine for a lab; for a real estate,
+# confirm the customer accepts their depot content leaving Canada.
+dr_location     = "westus2"
 alert_email     = "clesemann@gmail.com"
 ssh_public_key  = "ssh-ed25519 REPLACE_ME"
 edge_count      = 1

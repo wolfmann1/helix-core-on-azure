@@ -1,3 +1,8 @@
+# Changing this replaces the resource group. Do not change it and apply in one
+# step: Azure deletes resource groups asynchronously, and the in-flight deletion
+# will remove resources the same apply just created. Destroy first, confirm the
+# group is gone with "az group show -n p4-dev-rg", then change and apply.
+# See docs/GETTING-STARTED.md.
 location       = "canadaeast"
 alert_email    = "clesemann@gmail.com"
 ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKPVLh9iBBzprRNCe+JzTc4OAk8ZQbMlwaPO8vH+9Kmd juwel@cl-gaming-pc"

@@ -127,6 +127,45 @@ Note that `az storage account list` can lag a failed create by a minute or two
 and report nothing while the account exists. `terraform state list` and a
 refresh are the more reliable check.
 
+### Changing an environment's region
+
+A region change replaces the resource group, and that is not safe to do in a
+single apply. Azure deletes a resource group **asynchronously**: the API returns
+before the deletion has finished. Terraform sees the delete complete, recreates
+a group with the same name, and starts creating children while Azure is still
+tearing the old one down. The in-flight deletion removes the new resources and
+the apply fails with:
+
+```
+Provider produced inconsistent result after apply
+... produced an unexpected new value: Root object was present, but now absent.
+```
+
+and, for anything with a data plane:
+
+```
+ParentResourceNotFound: ... storageAccounts/<name> could not be found
+```
+
+Neither is a provider bug, though the first message says so.
+
+Do it in three steps instead, confirming Azure has finished between each:
+
+```powershell
+# 1. tear down, and wait for the group to actually disappear
+terraform -chdir=envs/dev destroy
+az group show -n p4-dev-rg      # repeat until this returns ResourceNotFound
+
+# 2. change location in envs/dev/terraform.tfvars
+
+# 3. apply into the new region
+terraform -chdir=envs/dev apply
+```
+
+If an apply already failed this way, state now holds resources that no longer
+exist. `destroy` reconciles that -- it refreshes, finds them gone, and drops
+them from state -- so run the sequence above from step 1.
+
 ## 3. First environment
 
 Set `ssh_public_key` in `envs/dev/terraform.tfvars`, then:
