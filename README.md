@@ -5,7 +5,9 @@ server, edge servers, proxies, broker, cross-region standby, P4 Code Review and
 P4 Search. Deployed through a GitHub Actions pipeline with an approval gate, and
 monitored with alerts specific to Perforce rather than generic VM metrics.
 
-Setup instructions are in [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+Setup is in [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md). Every failure
+encountered building this, with causes and commands, is in
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 This file covers the failure modes the design addresses and the reasoning behind
 each choice.
 

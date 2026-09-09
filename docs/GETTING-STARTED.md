@@ -129,100 +129,16 @@ refresh are the more reliable check.
 
 ### Changing an environment's region
 
-A region change replaces the resource group, and that is not safe to do in a
-single apply. Azure deletes a resource group **asynchronously**: the API returns
-before the deletion has finished. Terraform sees the delete complete, recreates
-a group with the same name, and starts creating children while Azure is still
-tearing the old one down. The in-flight deletion removes the new resources and
-the apply fails with:
-
-```
-Provider produced inconsistent result after apply
-... produced an unexpected new value: Root object was present, but now absent.
-```
-
-and, for anything with a data plane:
-
-```
-ParentResourceNotFound: ... storageAccounts/<name> could not be found
-```
-
-Neither is a provider bug, though the first message says so.
-
-Do it in three steps instead, confirming Azure has finished between each:
+A region change replaces the resource group and must be done in three steps,
+not one, because Azure deletes resource groups asynchronously. See
+[TROUBLESHOOTING.md, Region changes](TROUBLESHOOTING.md#region-changes).
 
 ```powershell
-# 1. tear down, and wait for the group to actually disappear
 terraform -chdir=envs/dev destroy
-az group show -n p4-dev-rg      # repeat until this returns ResourceNotFound
-
-# 2. change location in envs/dev/terraform.tfvars
-
-# 3. apply into the new region
+az group show -n p4-dev-rg          # repeat until ResourceNotFound
+# change location in envs/dev/terraform.tfvars
 terraform -chdir=envs/dev apply
 ```
-
-If an apply already failed this way, state now holds resources that no longer
-exist. `destroy` reconciles that -- it refreshes, finds them gone, and drops
-them from state.
-
-The reverse also happens: a failed apply can leave resources in Azure that are
-**not** in state, because the apply errored before recording them. `destroy`
-then does not know about them, and deleting the resource group fails with:
-
-```
-Error: deleting Resource Group "p4-dev-rg": the Resource Group still contains Resources.
-```
-
-That check is deliberate -- the provider will not sweep resources it did not
-create. Keep it on: it turns drift into a visible event. Clear the group by hand
-instead:
-
-```powershell
-az group delete -n p4-dev-rg --yes
-az group show -n p4-dev-rg      # repeat until ResourceNotFound
-```
-
-Do not disable `prevent_deletion_if_contains_resources` to get past it. That
-flag makes every future destroy sweep anything sharing the group, tracked or
-not.
-
-#### Managed identity left behind in the old region
-
-A VM with a system-assigned identity has a service principal in Entra ID,
-stamped with the region the VM was in. Deleting the VM does not always delete
-that principal promptly. Recreating a VM with the same resource ID -- same
-subscription, resource group and name -- in a different region then fails:
-
-```
-FailedIdentityOperation: ... [AlreadyExistServicePrincipalInDifferentRegion]:
-Location mismatch in AAD and in Model. LocationInAAD: 'canadacentral',
-LocationInModel: 'canadaeast'
-```
-
-Confirm the principal belongs to the deleted VM, then remove it:
-
-```powershell
-az ad sp show --id <objectId from the error> --query "{name:displayName, type:servicePrincipalType}" -o json
-az ad sp delete --id <objectId from the error>
-```
-
-`displayName` should match the VM name and `servicePrincipalType` should be
-`ManagedIdentity`.
-
-**This usually fails with "Insufficient privileges to complete the operation",
-and that is not a missing directory role.** Managed-identity service principals
-are owned by the resource provider, not by the directory, so Entra rejects
-direct deletion regardless of what roles you hold. Entra clears them up on its
-own eventually.
-
-The reliable fix is to not collide in the first place, which is why node names
-include a region code -- see ARCHITECTURE.md. If you hit this on an existing
-deployment, changing the node name is the way through.
-
-This is worth knowing before a region migration of anything using managed
-identities: the identity is a directory object with its own lifecycle, and it
-does not move with the resource.
 
 ## 3. First environment
 

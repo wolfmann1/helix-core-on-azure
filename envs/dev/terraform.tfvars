@@ -63,3 +63,4 @@ serverlocks_tmpfs_mb = 1024  # server.locks in RAM; 0 to skip
 #
 # Changing to any of these needs the guardrails redeployed first, since
 # allowedVmSkus gates them.
+vm_size = "Standard_B2s_v2"
