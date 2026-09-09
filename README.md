@@ -133,6 +133,14 @@ A local Hyper-V option using the same provisioning scripts is documented in
   `binary-i386` for Ubuntu, and no `binary-arm64`. p4d cannot be installed from
   the vendor repository on an Ampere VM, so every `Standard_B*p*` size is
   unusable regardless of policy or availability.
+- **Allocation failure is not the same as SKU unavailability.**
+  `SkuNotAvailable ... NotAvailableForSubscription` means the subscription is
+  never offered that size there, and `az vm list-skus` shows it in advance.
+  `AllocationFailed` means the datacenter has no free capacity for that size at
+  that moment; it is transient and does not appear in `list-skus`, which reports
+  subscription restrictions rather than live capacity. The remedies differ:
+  change region or subscription for the first, retry or change size for the
+  second.
 - **SKU capacity is separate from SKU policy, and from architecture.** A size
   permitted by the guardrails can still be refused with `SkuNotAvailable`, which
   varies by region, zone and subscription type. On this subscription every x86

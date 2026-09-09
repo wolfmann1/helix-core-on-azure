@@ -42,3 +42,24 @@ serverlocks_tmpfs_mb = 1024  # server.locks in RAM; 0 to skip
 #
 # canadaeast has the x86 B-series v2 sizes unrestricted, so that is the region
 # used here. Both regions are permitted by the az104-lab guardrails.
+#
+# Two different failures look similar and are not:
+#
+#   SkuNotAvailable ... NotAvailableForSubscription
+#     The subscription is not offered that size in that region. Permanent.
+#     Visible in advance: az vm list-skus --location <region> --all
+#
+#   AllocationFailed ... insufficient capacity for the requested VM size
+#     The datacenter has no free capacity for that size right now. Transient,
+#     and NOT visible in list-skus, which reports subscription restrictions
+#     rather than live capacity. Retry, or use another size.
+#
+# Sizes with no subscription restriction in canadaeast, in order to try:
+#   Standard_B2ats_v2   AMD, 2 vCPU / 8 GiB   (default)
+#   Standard_B2as_v2    AMD, 2 vCPU / 8 GiB
+#   Standard_B2s_v2     Intel, 2 vCPU / 8 GiB
+#   Standard_B2ls_v2    Intel, 2 vCPU / 4 GiB
+#   Standard_B2ts_v2    Intel, 2 vCPU / 1 GiB  (too small for p4d + SDP)
+#
+# Changing to any of these needs the guardrails redeployed first, since
+# allowedVmSkus gates them.
