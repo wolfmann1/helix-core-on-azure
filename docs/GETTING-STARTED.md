@@ -84,10 +84,9 @@ create straight after the assignment still returns 403.
 
 The first attempt at this configuration failed on
 `KeyBasedAuthenticationNotPermitted` while waiting for the storage account's
-data plane. The account was created in Azure but not recorded in state, so a
-second apply tries to create a name that already exists.
-
-Check whether it is there:
+data plane. Whether that leaves anything behind depends on how far the create
+got: Azure may roll the account back, or it may exist without being recorded in
+state. Check before assuming either:
 
 ```powershell
 az storage account list -o json | ConvertFrom-Json |
@@ -95,8 +94,12 @@ az storage account list -o json | ConvertFrom-Json |
   Select-Object name, resourceGroup, id
 ```
 
-If it exists, adopt it rather than deleting it -- the name is already correct,
-because `random_string` is in state and will generate the same suffix:
+**If nothing is listed**, there is no orphan. Re-run `terraform apply`. The
+resource group and `random_string` are already in state, so the account is
+recreated with the same name.
+
+**If it is listed**, adopt it rather than deleting it -- the name is already
+correct, because `random_string` is in state and will generate the same suffix:
 
 ```powershell
 terraform import azurerm_storage_account.state "<the id from above>"
