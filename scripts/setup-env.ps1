@@ -56,12 +56,35 @@ if ($Diagnose) {
   Write-Host "Application Control state:" -ForegroundColor Cyan
   (Get-AppControlState).GetEnumerator() | ForEach-Object { Write-Host ("  {0,-16} {1}" -f $_.Key, $_.Value) }
   Write-Host ""
+  $pyScripts = Get-PythonUserScripts
+  Write-Host ("Python user Scripts dir: {0}" -f $(if ($pyScripts) { $pyScripts } else { 'not found' })) -ForegroundColor Cyan
+  if ($pyScripts) {
+    $onPath = ($env:PATH -split ';') -contains $pyScripts
+    Write-Host ("  on PATH: {0}" -f $onPath)
+    $env:PATH = "$pyScripts;$env:PATH"
+  }
+  Write-Host ""
   Write-Host "Tool resolution:" -ForegroundColor Cyan
   foreach ($t in 'terraform','tflint','az','gh','jq','checkov','winget','py','python','pip') {
     $c = Get-Command $t -ErrorAction SilentlyContinue
     Write-Host ("  {0,-12} {1}" -f $t, $(if ($c) { $c.Source } else { 'not found' }))
   }
   exit 0
+}
+
+
+# pip installs console scripts into the per-user Scripts directory, which is
+# not on PATH by default. Ask Python where that is rather than guessing at the
+# version-specific path.
+function Get-PythonUserScripts {
+  foreach ($py in 'py', 'python', 'python3') {
+    if (-not (Get-Command $py -ErrorAction SilentlyContinue)) { continue }
+    try {
+      $out = & $py -c "import sysconfig;print(sysconfig.get_path('scripts', scheme='nt_user'))" 2>$null
+      if ($LASTEXITCODE -eq 0 -and $out -and (Test-Path $out.Trim())) { return $out.Trim() }
+    } catch { continue }
+  }
+  return $null
 }
 
 # --- GitHub release assets: naming is tool-specific -------------------------
@@ -164,6 +187,23 @@ Get-Content (Join-Path $root 'dependencies.txt') |
     if ($name -eq 'checkov') {
       if (Install-Checkov -Version $version) {
         Write-Host "    installed via python -m pip" -ForegroundColor Green
+        # pip warns that its Scripts directory is not on PATH and carries on.
+        # Without it the package is installed but the command does not resolve.
+        $pyScripts = Get-PythonUserScripts
+        if ($pyScripts) {
+          $env:PATH = "$pyScripts;$env:PATH"
+          if (Get-Command checkov -ErrorAction SilentlyContinue) {
+            Write-Host "    found at $pyScripts" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "    That directory is not on your PATH. ci-checks.ps1 adds it per run." -ForegroundColor DarkGray
+            Write-Host "    To make it permanent for your account:" -ForegroundColor DarkGray
+            Write-Host "      [Environment]::SetEnvironmentVariable('PATH'," -ForegroundColor DarkGray
+            Write-Host "        [Environment]::GetEnvironmentVariable('PATH','User') + ';$pyScripts', 'User')" -ForegroundColor DarkGray
+          } else {
+            Write-Host "    installed, but checkov still does not resolve" -ForegroundColor Yellow
+            $script:missing += $name
+          }
+        }
       } else {
         Write-Host "    SKIPPED. No signed Windows installer, and the pip shim is" -ForegroundColor Yellow
         Write-Host "    blocked by this machine's Application Control policy." -ForegroundColor Yellow

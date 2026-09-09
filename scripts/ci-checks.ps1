@@ -41,6 +41,17 @@ Push-Location $root
 $tools = Join-Path $root '.tools\bin'
 if (Test-Path $tools) { $env:PATH = "$tools;$env:PATH" }
 
+# pip puts console scripts in the per-user Scripts directory, which Windows
+# does not add to PATH. checkov lands there, so add it for this run.
+foreach ($py in 'py', 'python') {
+  if (-not (Get-Command $py -ErrorAction SilentlyContinue)) { continue }
+  try {
+    $pyScripts = & $py -c "import sysconfig;print(sysconfig.get_path('scripts', scheme='nt_user'))" 2>$null
+    if ($pyScripts -and (Test-Path $pyScripts)) { $env:PATH = "$($pyScripts.Trim());$env:PATH" }
+    break
+  } catch { continue }
+}
+
 $failed = @()
 
 function Invoke-Step {
