@@ -112,3 +112,9 @@ variable "key_vault_purge_protection" {
   type        = bool
   default     = false
 }
+
+variable "enable_nat_gateway" {
+  description = "Deploy a NAT gateway and make the Perforce subnets private. Bills hourly; see modules/network for the tradeoff against Azure's default outbound access."
+  type        = bool
+  default     = false
+}

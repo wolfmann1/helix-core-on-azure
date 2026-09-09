@@ -147,6 +147,36 @@ than a service principal secret. The state storage account sets
 `shared_access_key_enabled = false`, requiring Entra ID authentication. Nothing
 long-lived is written to the repository, to state, or to cloud-init.
 
+### Outbound egress is a deliberate choice, not a default
+
+Perforce nodes have no public IP, but they need outbound internet: `apt` for
+packages, and the SDP download from the Perforce workshop. Something has to
+provide egress.
+
+Azure retired **default outbound access** for new virtual networks on
+**31 March 2026**. New VNets now default to private subnets; the azurerm
+provider explicitly setting `default_outbound_access_enabled = true` is what
+keeps it working. When it is in use, Azure assigns a Microsoft-owned outbound
+address that can change without notice, and the portal raises an advisory about
+it.
+
+`enable_nat_gateway` picks between the two options:
+
+| | dev / stage | prod |
+|---|---|---|
+| `enable_nat_gateway` | false | true |
+| Subnets | default outbound access | private |
+| Outbound address | Microsoft-owned, not stable | a Standard public IP we own |
+| Cost | none | hourly, whether or not traffic flows |
+
+Giving a Perforce host its own public IP is the third option and is not
+considered. The NAT gateway is the correct design; it is off in dev and stage
+because it bills hourly like Bastion, and those environments run for hours at a
+time while prod is applied on demand and destroyed.
+
+`AzureBastionSubnet` is excluded from the NAT gateway association. Bastion
+manages its own outbound and Azure rejects the association.
+
 ### Node names carry the region
 
 Nodes are named `p4-<env>-<region code>-<role>-<nn>`, for example

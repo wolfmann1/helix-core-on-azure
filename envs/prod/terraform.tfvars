@@ -32,3 +32,11 @@ zone                 = "1"
 # Note this is one-way: Azure does not allow purge protection to be disabled
 # once a vault has it.
 key_vault_purge_protection = true
+
+# Outbound egress through an IP we own, and the Perforce subnets set private.
+# Azure retired default outbound access for new virtual networks on 2026-03-31,
+# and relying on a Microsoft-owned address that can change is not something to
+# demonstrate in a reference deployment. The NAT gateway bills hourly whether or
+# not traffic flows, like Bastion, which is affordable here only because prod is
+# applied on demand and destroyed. dev and stage stay on default outbound.
+enable_nat_gateway = true

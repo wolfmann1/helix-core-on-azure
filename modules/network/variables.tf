@@ -48,3 +48,34 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_nat_gateway" {
+  description = <<-EOT
+    Deploy a NAT gateway and make the Perforce subnets private.
+
+    The nodes need outbound internet: apt for packages, and the SDP download
+    from the Perforce workshop. Something has to provide it, and there are only
+    two honest choices here, because giving a Perforce host a public IP is not
+    one of them.
+
+    false (default): subnets keep default outbound access. Azure assigns a
+    Microsoft-owned outbound IP that can change without notice. It costs
+    nothing, and Azure retired it for new virtual networks on 31 March 2026 --
+    new VNets now default to private subnets, and the provider setting this to
+    true is what keeps it working here. The portal raises an advisory about it.
+
+    true: a NAT gateway provides outbound through an IP you own, and the
+    subnets are set private. This is the correct design and what a real estate
+    should use. It bills hourly whether or not anything is sending traffic,
+    like Bastion, so it is off in dev and stage and on in prod, which is
+    applied on demand and destroyed.
+  EOT
+  type    = bool
+  default = false
+}
+
+variable "nat_gateway_zones" {
+  description = "Availability zones for the NAT gateway and its public IP. Empty for a regional (non-zonal) deployment."
+  type        = list(string)
+  default     = []
+}

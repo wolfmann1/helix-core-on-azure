@@ -54,6 +54,7 @@ resource "azurerm_resource_group" "this" {
 
 module "network" {
   source              = "../../modules/network"
+  enable_nat_gateway  = var.enable_nat_gateway
   name_prefix         = local.prefix
   location            = var.location
   resource_group_name = azurerm_resource_group.this.name
