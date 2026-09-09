@@ -11,7 +11,11 @@
 # reuse these scripts unchanged.
 #
 # Usage:
-#   provision.sh --role commit --install-sdp true --p4port 1666 --sdp-instance 1
+#   provision.sh --role commit --install-sdp true --p4port 1666 --sdp-instance 1 \
+#                --disk-map "p4db=0,p4db2=1,p4logs=2,p4depots=3"
+#
+# --disk-map names which LUN carries which volume. Terraform passes the same
+# map it used when attaching the disks, so the two cannot drift.
 #
 set -euo pipefail
 
@@ -22,6 +26,7 @@ SDP_INSTANCE="1"
 COMMIT_HOST=""
 P4_VERSION="latest"
 SERVERLOCKS_MB="1024"
+DISK_MAP=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     --commit-host)  COMMIT_HOST="$2"; shift 2 ;;
     --p4-version)   P4_VERSION="$2"; shift 2 ;;
     --serverlocks-mb) SERVERLOCKS_MB="$2"; shift 2 ;;
+    --disk-map)     DISK_MAP="$2"; shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -39,7 +45,7 @@ done
 [[ -z "$ROLE" ]] && { echo "--role is required" >&2; exit 2; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export SDP_INSTANCE P4PORT COMMIT_HOST P4_VERSION SERVERLOCKS_MB
+export SDP_INSTANCE P4PORT COMMIT_HOST P4_VERSION SERVERLOCKS_MB DISK_MAP
 
 # ---- 1. OS detection -------------------------------------------------------
 . /etc/os-release

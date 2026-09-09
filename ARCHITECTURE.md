@@ -82,6 +82,43 @@ Host caching differs per volume where the type supports it: `p4db` and `p4db2`
 use ReadOnly, everything else uses none. Sequential journal writes gain nothing
 from host cache and can be slowed by it.
 
+### Disks are formatted by the guest, mapped by LUN
+
+Terraform attaches raw disks; it does not format them. `volumes.sh` creates the
+filesystem, applies the label, and mounts it.
+
+Device names such as `/dev/sdb` are not stable across reboots, so the script
+does not use them. Terraform passes `--disk-map "p4db=0,p4db2=1,p4logs=2,
+p4depots=3"`, built from the same map used to attach the disks, and the guest
+resolves each LUN through a by-path symlink: `/dev/disk/azure/scsi1/lunN` where
+the Azure agent is present, and the generic SCSI by-path form otherwise, which
+is what the Hyper-V path uses.
+
+A disk with no label is formatted. A disk already carrying the expected label is
+left alone, so re-running provisioning is safe. A disk carrying a *different*
+label is refused rather than reformatted, since that is more likely a mistake
+than something to overwrite.
+
+Whole-disk filesystems, no partition table. Each disk serves one volume, so
+partitioning adds nothing and makes growing the disk harder.
+
+### Provisioning scripts are embedded in cloud-init
+
+`modules/p4-node` reads the `provisioning/` tree and writes it into
+`custom_data` as base64, and cloud-init unpacks it to `/opt/p4-provisioning`
+before running `provision.sh`.
+
+Fetching from the checkpoint storage account would be the better design, but it
+does not work yet: that account has public network access disabled and there
+are no private endpoints, so nothing inside the VNet can reach it. Embedding
+needs no network and no credentials, and produces a node identical to the
+Hyper-V path.
+
+`custom_data` is capped at 64 KB base64. The tree is around 19 KB, and a
+`precondition` on the VM fails the plan if it grows past the limit rather than
+letting Azure reject the deployment with a less obvious error. Once private
+endpoints exist, this should become a blob fetch.
+
 ### An edge server has its own metadata
 
 That is the defining characteristic of an edge server, so the `edge-server`

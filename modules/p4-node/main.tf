@@ -9,7 +9,20 @@ locals {
     "--p4port ${var.p4_port}",
     var.commit_host != "" ? "--commit-host ${var.commit_host}" : "",
     "--serverlocks-mb ${var.serverlocks_tmpfs_mb}",
+    "--disk-map ${local.disk_map}",
   ]))
+
+  # Which LUN carries which volume, passed through to volumes.sh so the guest
+  # does not have to guess. Built from the same map used to attach the disks.
+  disk_map = join(",", [for vol, d in local.data_disks : "${vol}=${d.lun}"])
+
+  # The provisioning tree, embedded in cloud-init. cloud-init/ is excluded
+  # because it is the template rendering this, not something the node runs.
+  provisioning_root = "${path.module}/../../provisioning"
+  provisioning_files = {
+    for f in fileset(local.provisioning_root, "**") : f => filebase64("${local.provisioning_root}/${f}")
+    if !startswith(f, "cloud-init/")
+  }
 
   storage_account_type = {
     premium    = "Premium_LRS"
@@ -119,10 +132,21 @@ resource "azurerm_linux_virtual_machine" "this" {
     type = "SystemAssigned"
   }
 
-  custom_data = base64encode(templatefile("${path.module}/../../provisioning/cloud-init/node.yaml.tftpl", {
-    provision_args = local.provision_args
-    role           = var.role
+  # custom_data is capped at 64 KB base64. The embedded tree is around 19 KB
+  # today; the check fails the plan rather than letting Azure reject the deploy
+  # with a less obvious error.
+  custom_data = base64encode(templatefile("${local.provisioning_root}/cloud-init/node.yaml.tftpl", {
+    provision_args     = local.provision_args
+    role               = var.role
+    provisioning_files = local.provisioning_files
   }))
+
+  lifecycle {
+    precondition {
+      condition     = length(base64encode(templatefile("${local.provisioning_root}/cloud-init/node.yaml.tftpl", { provision_args = local.provision_args, role = var.role, provisioning_files = local.provisioning_files }))) < 65536
+      error_message = "Rendered cloud-init exceeds the 64 KB custom_data limit. Fetch the provisioning tree from blob storage instead of embedding it."
+    }
+  }
 }
 
 resource "azurerm_managed_disk" "data" {

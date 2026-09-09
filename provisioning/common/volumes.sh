@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# volumes.sh <role> — mount the Perforce volumes and create the SDP symlinks.
+# volumes.sh <role> -- format, label, mount the Perforce volumes and create the
+# SDP symlinks.
 #
 # Volume layout (see ARCHITECTURE.md for the reasoning):
 #   p4db          metadata, db.* files
@@ -15,22 +16,64 @@
 #   p4db full   -> recovery may require a checkpoint restore.
 # Sharing them means depot or log growth can cause an outage on metadata.
 #
+# Disks arrive raw. DISK_MAP tells this script which LUN carries which volume,
+# for example "p4db=0,p4db2=1,p4logs=2,p4depots=3". Terraform passes the map it
+# used when attaching the disks, so the two cannot drift.
+#
+# Device names such as /dev/sdb are not stable across reboots, so the LUN is
+# resolved through a by-path symlink instead. Azure's agent publishes
+# /dev/disk/azure/scsi1/lunN; the generic SCSI by-path form is the fallback and
+# is what the Hyper-V path uses.
+#
 # SDP expects the hx* names. This script mounts the p4* names and symlinks the
 # hx* paths onto them, so SDP tooling runs unmodified.
 set -euo pipefail
 ROLE="${1:?role required}"
 SERVERLOCKS_MB="${SERVERLOCKS_MB:-1024}"
+DISK_MAP="${DISK_MAP:-}"
+FSTYPE="${FSTYPE:-xfs}"
 
-mount_one() {  # mount_one <label> <mountpoint>
-  local label="$1" mp="$2" dev
-  dev="$(blkid -L "$label" 2>/dev/null || true)"
+resolve_lun() {  # resolve_lun <lun> -> device path on stdout, empty if absent
+  local lun="$1" dev=""
+  if [[ -e "/dev/disk/azure/scsi1/lun${lun}" ]]; then
+    dev="$(readlink -f "/dev/disk/azure/scsi1/lun${lun}")"
+  else
+    # Generic SCSI: host:bus:target:lun. Data disks sit on target 0.
+    dev="$(readlink -f /dev/disk/by-path/*scsi-0:0:0:"${lun}" 2>/dev/null | head -1 || true)"
+  fi
+  [[ -b "$dev" ]] && echo "$dev"
+}
+
+prepare_disk() {  # prepare_disk <label> <lun>
+  local label="$1" lun="$2" dev existing
+  dev="$(resolve_lun "$lun")"
   if [[ -z "$dev" ]]; then
-    echo "[volumes] no device labelled $label — not attached for this role"
+    echo "[volumes] no disk at LUN $lun for $label -- not attached for this role"
     return 0
   fi
+
+  existing="$(blkid -o value -s LABEL "$dev" 2>/dev/null || true)"
+  if [[ -z "$existing" ]]; then
+    # Whole-disk filesystem, no partition table. Simpler to grow later, and
+    # there is no reason to partition a disk dedicated to one volume.
+    echo "[volumes] formatting $dev as $FSTYPE, label $label"
+    mkfs."$FSTYPE" -f -L "$label" "$dev" >/dev/null
+  elif [[ "$existing" != "$label" ]]; then
+    # Refuse rather than reformat. A disk carrying someone else's label is more
+    # likely a mistake than something to overwrite.
+    echo "[volumes] REFUSING $dev: labelled '$existing', expected '$label'" >&2
+    return 1
+  else
+    echo "[volumes] $dev already labelled $label"
+  fi
+}
+
+mount_one() {  # mount_one <label> <mountpoint>
+  local label="$1" mp="$2"
+  blkid -L "$label" >/dev/null 2>&1 || { echo "[volumes] no filesystem labelled $label"; return 0; }
   mkdir -p "$mp"
   grep -q "LABEL=$label " /etc/fstab || \
-    echo "LABEL=$label $mp xfs defaults,noatime,nofail 0 2" >> /etc/fstab
+    echo "LABEL=$label $mp $FSTYPE defaults,noatime,nofail 0 2" >> /etc/fstab
   mountpoint -q "$mp" || mount "$mp"
   echo "[volumes] $label -> $mp"
 }
@@ -40,6 +83,14 @@ link() {  # link <target> <linkname>; skips if target is missing
   ln -sfn "$1" "$2"
   echo "[volumes] symlink $2 -> $1"
 }
+
+# Format and label everything named in DISK_MAP before mounting anything.
+if [[ -n "$DISK_MAP" ]]; then
+  IFS=',' read -ra pairs <<< "$DISK_MAP"
+  for pair in "${pairs[@]}"; do
+    prepare_disk "${pair%%=*}" "${pair##*=}"
+  done
+fi
 
 case "$ROLE" in
   commit|edge|standby)
@@ -52,8 +103,8 @@ case "$ROLE" in
 
     # When /p4 and /p4ckps have no volume of their own they live on p4depots,
     # which is where SDP places them by default.
-    [[ -d /p4     ]] || mkdir -p /p4depots/p4     && link /p4depots/p4     /p4
-    [[ -d /p4ckps ]] || mkdir -p /p4depots/p4ckps && link /p4depots/p4ckps /p4ckps
+    mountpoint -q /p4     || { mkdir -p /p4depots/p4     && link /p4depots/p4     /p4; }
+    mountpoint -q /p4ckps || { mkdir -p /p4depots/p4ckps && link /p4depots/p4ckps /p4ckps; }
 
     # server.locks in RAM. SDP recommends this; it is a tmpfs, not a disk.
     if [[ "$SERVERLOCKS_MB" -gt 0 ]]; then
@@ -86,3 +137,6 @@ case "$ROLE" in
     echo "[volumes] role=$ROLE holds no Perforce data volumes"
     ;;
 esac
+
+echo "[volumes] final layout:"
+lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS | sed 's/^/  /'
