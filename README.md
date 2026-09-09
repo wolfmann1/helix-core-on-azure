@@ -129,6 +129,17 @@ A local Hyper-V option using the same provisioning scripts is documented in
   permitted by the lab guardrails. `Standard_B2pts_v2` is also permitted but is
   ARM64; using it would mean verifying Perforce and Swarm packaging for arm64
   first.
+- **SKU capacity is separate from SKU policy.** A size permitted by the
+  guardrails can still be refused with `SkuNotAvailable ... Capacity
+  Restrictions`, which varies by region, zone and subscription type. Check with
+  `az vm list-skus --location <region> --size Standard_B --all -o table` before
+  choosing. `vm_size` is an environment variable so this is a one-line change.
+- **Alerts against custom tables need ingestion first.** Azure validates a
+  scheduled query rule's KQL at creation and rejects a query against a table
+  that does not exist. The seven alerts reading `*_CL` tables are held back by
+  `custom_log_tables_ready`, which stays false until a data collection rule and
+  an agent-side collector exist. The five alerts against built-in tables
+  (InsightsMetrics, Syslog, Heartbeat) deploy regardless.
 - **Lab subscription policy.** If the `az104-lab` guardrails are deployed on the
   target subscription, they deny any VM SKU outside `Standard_B2pts_v2`,
   `Standard_B2ats_v2`, `Standard_B1s` and `Standard_B2s`, and any region outside

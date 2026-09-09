@@ -55,7 +55,7 @@ module "commit" {
   location             = var.location
   resource_group_name  = azurerm_resource_group.this.name
   subnet_id            = module.network.subnet_ids["commit"]
-  vm_size              = "Standard_B2ats_v2"
+  vm_size              = var.vm_size
   ssh_public_key       = var.ssh_public_key
   install_sdp          = var.install_sdp
   key_vault_id           = module.storage.key_vault_id

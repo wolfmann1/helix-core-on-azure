@@ -23,10 +23,16 @@ resource "azurerm_monitor_action_group" "page" {
 locals {
   # Each entry records why the alert exists, so the reasoning carries over
   # when the module is pointed at a different estate.
+  #
+  # "custom" marks an alert whose query reads a custom log table (the _CL
+  # suffix). Azure validates the KQL when the rule is created and rejects a
+  # query against a table that does not exist yet, so these cannot be deployed
+  # until something is ingesting into them. See var.custom_log_tables_ready.
   alerts = {
     # ---- Tier 1: outage imminent or in progress -------------------------
     p4logs_free = {
       tier   = 1
+      custom = false
       why    = "The journal cannot be written and p4d stops. Generic monitoring misses this because the metadata volume still looks healthy."
       kql    = "InsightsMetrics | where Name == 'FreeSpacePercentage' and Tags has 'p4logs' | summarize v=min(Val) by Computer"
       op     = "LessThan"
@@ -34,6 +40,7 @@ locals {
     }
     p4db_free = {
       tier   = 1
+      custom = false
       why    = "A full metadata volume may require a checkpoint restore rather than freeing space and restarting."
       kql    = "InsightsMetrics | where Name == 'FreeSpacePercentage' and Tags has 'p4db' | summarize v=min(Val) by Computer"
       op     = "LessThan"
@@ -41,6 +48,7 @@ locals {
     }
     checkpoint_failed = {
       tier   = 1
+      custom = false
       why    = "A missed checkpoint has no immediate impact, but determines how much data is recoverable during a restore."
       kql    = "Syslog | where SyslogMessage has 'checkpoint' and SyslogMessage has_any ('failed','error') | summarize v=count() by Computer"
       op     = "GreaterThan"
@@ -48,6 +56,7 @@ locals {
     }
     replica_lag = {
       tier   = 1
+      custom = true
       why    = "Rising lag means the effective RPO differs from the documented one. This alert makes the RPO a measured value."
       kql    = "P4Replication_CL | summarize v=max(LagSeconds_d) by Computer"
       op     = "GreaterThan"
@@ -55,6 +64,7 @@ locals {
     }
     p4d_restart = {
       tier   = 1
+      custom = false
       why    = "Unexplained restarts commonly precede a resource or memory problem by one to two weeks."
       kql    = "Heartbeat | summarize v=count() by Computer" # placeholder: replace with p4d uptime counter
       op     = "GreaterThan"
@@ -64,6 +74,7 @@ locals {
     # ---- Tier 2: users already hurting ----------------------------------
     submit_latency_p95 = {
       tier   = 2
+      custom = true
       why    = "The user-facing SLI. The tier 1 alerts are leading indicators for this one."
       kql    = "P4Commands_CL | where Command_s == 'user-submit' | summarize v=percentile(Duration_d, 95) by Computer"
       op     = "GreaterThan"
@@ -71,6 +82,7 @@ locals {
     }
     blocked_commands = {
       tier   = 2
+      custom = true
       why    = "A single large sync holding a lock can block other users. p4 monitor shows this before users report it."
       kql    = "P4Monitor_CL | where Status_s == 'B' or Runtime_d > ${var.thresholds.blocked_command_secs} | summarize v=count() by Computer"
       op     = "GreaterThan"
@@ -78,6 +90,7 @@ locals {
     }
     connection_saturation = {
       tier   = 2
+      custom = true
       why    = "Fires before connections are rejected rather than after."
       kql    = "P4Monitor_CL | summarize v=dcount(User_s) by Computer"
       op     = "GreaterThan"
@@ -85,6 +98,7 @@ locals {
     }
     proxy_cache_hit = {
       tier   = 2
+      custom = true
       why    = "A falling hit rate means a remote site is pulling content across the WAN. It is usually reported as general slowness from a site with no local monitoring."
       kql    = "P4Proxy_CL | summarize v=avg(CacheHitRatio_d) by Computer"
       op     = "LessThan"
@@ -94,6 +108,7 @@ locals {
     # ---- Tier 3: administrative, still causes outages --------------------
     license_expiry = {
       tier   = 3
+      custom = true
       why    = "Licence expiry is a common and entirely preventable cause of downtime."
       kql    = "P4License_CL | summarize v=min(DaysRemaining_d)"
       op     = "LessThan"
@@ -101,6 +116,7 @@ locals {
     }
     depot_growth_projection = {
       tier   = 3
+      custom = false
       why    = "Projected days-to-full gives enough lead time to add capacity during a planned window."
       kql    = "InsightsMetrics | where Name == 'FreeSpacePercentage' and Tags has 'p4depots' | summarize v=min(Val) by Computer"
       op     = "LessThan"
@@ -108,6 +124,7 @@ locals {
     }
     restore_verify_stale = {
       tier   = 3
+      custom = true
       why    = "If verification has not passed recently, the restore procedure is untested against current data."
       kql    = "P4RestoreVerify_CL | summarize v=datetime_diff('day', now(), max(TimeGenerated))"
       op     = "GreaterThan"
@@ -117,7 +134,13 @@ locals {
 }
 
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "this" {
-  for_each             = local.alerts
+  # Alerts against custom tables are held back until those tables exist. An
+  # alert that cannot resolve its table is worse than no alert: it looks like
+  # coverage and can never fire.
+  for_each = {
+    for k, v in local.alerts : k => v
+    if !v.custom || var.custom_log_tables_ready
+  }
   name                 = "${var.name_prefix}-alert-${each.key}"
   location             = var.location
   resource_group_name  = var.resource_group_name

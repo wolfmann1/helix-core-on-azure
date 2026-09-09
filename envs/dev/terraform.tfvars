@@ -23,3 +23,11 @@ disk_sizes_gb = {}
 split_metadata       = true  # p4db + p4db2; false gives one shared metadata disk
 separate_sdp_volumes = false # true adds /p4 and /p4ckps as their own volumes
 serverlocks_tmpfs_mb = 1024  # server.locks in RAM; 0 to skip
+
+# Standard_B2ats_v2 was refused in canadacentral with "SkuNotAvailable ...
+# Capacity Restrictions" on 2026-09-09. Being allowed by policy is not the same
+# as having capacity, and capacity varies by region, zone and subscription type.
+# Check what is actually deployable before changing this:
+#   az vm list-skus --location canadacentral --size Standard_B --all -o table
+# vm_size = "Standard_B2pts_v2"   # ARM64; needs an arm64 image and Perforce arm64 packages
+# vm_size = "Standard_B2s"        # B v1, still available, retires 2028-11-15

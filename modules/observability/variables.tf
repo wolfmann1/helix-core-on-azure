@@ -50,3 +50,22 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "custom_log_tables_ready" {
+  description = <<-EOT
+    Deploy the alerts whose queries read custom log tables (P4Commands_CL,
+    P4Monitor_CL, P4Replication_CL, P4Proxy_CL, P4License_CL,
+    P4RestoreVerify_CL).
+
+    Azure validates a scheduled query rule's KQL at creation time and rejects a
+    query against a table that does not exist, so these cannot be created until
+    something is ingesting into them. That work is not built yet: it needs a
+    data collection rule per table and an agent-side collector that parses the
+    Perforce structured logs and p4 monitor output.
+
+    Leave false until ingestion exists. Five alerts against built-in tables
+    (InsightsMetrics, Syslog, Heartbeat) deploy either way.
+  EOT
+  type    = bool
+  default = false
+}

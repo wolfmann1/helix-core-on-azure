@@ -76,3 +76,19 @@ variable "zone" {
   type        = string
   default     = null
 }
+
+variable "vm_size" {
+  description = <<-EOT
+    VM size for the Perforce roles.
+
+    A SKU being permitted by policy does not mean it has capacity. Azure
+    returns "SkuNotAvailable ... Capacity Restrictions" per region and zone, and
+    availability changes over time. Check before changing this:
+
+      az vm list-skus --location canadacentral --size Standard_B --all -o table
+
+    Rows with a restriction of NotAvailableForSubscription cannot be deployed.
+  EOT
+  type    = string
+  default = "Standard_B2ats_v2"
+}
