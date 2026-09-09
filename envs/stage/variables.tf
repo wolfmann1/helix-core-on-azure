@@ -76,3 +76,17 @@ variable "zone" {
   type        = string
   default     = null
 }
+
+variable "p4search_vm_size" {
+  description = <<-EOT
+    VM size for the P4 Search node. Perforce states 4 vCPU and 8 GB RAM per
+    component for a small site, so this is larger than every other role here.
+
+    The az104-lab guardrails deny any SKU outside Standard_B2pts_v2,
+    Standard_B2ats_v2, Standard_B1s and Standard_B2s. Enabling P4 Search
+    therefore requires widening allowedVmSkus in az104-lab/guardrails.bicep and
+    redeploying, or accepting an undersized node that will not index reliably.
+  EOT
+  type        = string
+  default     = "Standard_D2as_v5"
+}

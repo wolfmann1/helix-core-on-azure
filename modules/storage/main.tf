@@ -21,7 +21,9 @@ resource "azurerm_storage_account" "checkpoints" {
 
   blob_properties {
     versioning_enabled = true
-    delete_retention_policy { days = 30 }
+    delete_retention_policy {
+      days = 30
+    }
   }
 }
 

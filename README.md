@@ -123,6 +123,12 @@ A local Hyper-V option using the same provisioning scripts is documented in
   requirement is 4 vCPU and 8 GB RAM per component, which is larger than the
   whole dev environment, so it is disabled by default and enabled explicitly
   per environment.
+- **Lab subscription policy.** If the `az104-lab` guardrails are deployed on the
+  target subscription, they deny any VM SKU outside `Standard_B2pts_v2`,
+  `Standard_B2ats_v2`, `Standard_B1s` and `Standard_B2s`, and any region outside
+  `canadacentral` and `canadaeast`. Every role here stays inside that list except
+  P4 Search, which needs a larger SKU than the policy allows; enabling it means
+  widening `allowedVmSkus` and redeploying the guardrails.
 - **SDP** is installed via the `install_sdp` parameter, so a plain p4d can be
   deployed alongside for comparison.
 

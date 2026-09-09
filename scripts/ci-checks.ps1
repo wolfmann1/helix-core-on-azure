@@ -10,11 +10,17 @@
 .PARAMETER Environment
   Which envs/<name> to validate and plan. Defaults to dev.
 
+.PARAMETER Fix
+  Run "terraform fmt -recursive" to rewrite files instead of only checking them.
+  Formatting is the one thing the pipeline reports that a machine can correct,
+  so fixing locally and committing the result keeps CI quiet.
+
 .PARAMETER SkipScan
   Skip checkov. Useful for a fast inner loop; CI never skips it.
 
 .EXAMPLE
   .\scripts\ci-checks.ps1
+  .\scripts\ci-checks.ps1 -Fix
   .\scripts\ci-checks.ps1 -Environment prod
   .\scripts\ci-checks.ps1 -SkipScan
 #>
@@ -22,6 +28,7 @@
 param(
   [ValidateSet('dev', 'stage', 'prod')]
   [string]$Environment = 'dev',
+  [switch]$Fix,
   [switch]$SkipScan
 )
 
@@ -63,7 +70,13 @@ function Test-Tool {
 try {
   if (-not (Test-Tool terraform)) { exit 1 }
 
-  Invoke-Step 'terraform fmt' { terraform fmt -check -recursive }
+  # terraform fmt parses before it formats, so a syntax error surfaces here
+  # rather than at validate. The message names the file and line.
+  if ($Fix) {
+    Invoke-Step 'terraform fmt -recursive (rewriting)' { terraform fmt -recursive }
+  } else {
+    Invoke-Step 'terraform fmt' { terraform fmt -check -recursive }
+  }
 
   Invoke-Step 'terraform init (no backend)' {
     terraform -chdir="envs/$Environment" init -backend=false -input=false
@@ -92,6 +105,10 @@ finally {
 Write-Host ""
 if ($failed.Count -gt 0) {
   Write-Host "FAILED: $($failed -join ', ')" -ForegroundColor Red
+  if ($failed -match 'fmt') {
+    Write-Host ""
+    Write-Host "If the failure is formatting rather than a syntax error, re-run with -Fix." -ForegroundColor Yellow
+  }
   exit 1
 }
 Write-Host "All checks passed for envs/$Environment" -ForegroundColor Green

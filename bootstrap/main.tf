@@ -12,7 +12,9 @@ terraform {
   }
 }
 
-provider "azurerm" { features {} }
+provider "azurerm" {
+  features {}
+}
 
 variable "location" {
   description = "Region for the state backend."
@@ -43,7 +45,9 @@ resource "azurerm_storage_account" "state" {
 
   blob_properties {
     versioning_enabled = true
-    delete_retention_policy { days = 30 }
+    delete_retention_policy {
+      days = 30
+    }
   }
 }
 

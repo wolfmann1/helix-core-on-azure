@@ -117,7 +117,7 @@ module "broker" {
   location            = var.location
   resource_group_name = azurerm_resource_group.this.name
   subnet_id           = module.network.subnet_ids["app"]
-  vm_size             = "Standard_B1ms"
+  vm_size             = "Standard_B1s"
   ssh_public_key      = var.ssh_public_key
   install_sdp         = false
   commit_host         = module.commit.private_ip
@@ -158,7 +158,7 @@ module "p4search" {
   location            = var.location
   resource_group_name = azurerm_resource_group.this.name
   subnet_id           = module.network.subnet_ids["app"]
-  vm_size             = "Standard_D2as_v5" # Elasticsearch floor; smaller will not index
+  vm_size             = var.p4search_vm_size
   ssh_public_key      = var.ssh_public_key
   install_sdp         = false
   commit_host         = module.commit.private_ip
