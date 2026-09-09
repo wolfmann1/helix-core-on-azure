@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  PowerShell counterpart to ci-checks.sh — fmt, validate, lint and scan.
+  PowerShell counterpart to ci-checks.sh - fmt, validate, lint and scan.
 
 .DESCRIPTION
   Runs the same sequence as the pipeline, so a failure here predicts a failure
@@ -80,6 +80,11 @@ function Test-Tool {
 
 try {
   if (-not (Test-Tool terraform)) { exit 1 }
+
+  # Cheap, and catches a failure mode that only appears at runtime.
+  Invoke-Step 'script encoding' {
+    & (Join-Path $PSScriptRoot 'Test-ScriptEncoding.ps1')
+  } -ContinueOnError
 
   # terraform fmt parses before it formats, so a syntax error surfaces here
   # rather than at validate. The message names the file and line.
