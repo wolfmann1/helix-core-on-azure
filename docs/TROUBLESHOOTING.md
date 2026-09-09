@@ -456,6 +456,26 @@ Set the environment the script expects first if it reads any:
 `bash -x` prints each command before running it, which locates the stop
 precisely.
 
+### Provisioning works by hand but not during boot
+
+Symptom: the script stops partway through cloud-init, but running the same
+script over `run-command` afterwards completes without error.
+
+Cause: cloud-init's `runcmd` fires before the Azure agent has finished
+publishing `/dev/disk/azure/scsi1/lunN` for every attached data disk. Early in
+boot only some LUNs exist, so anything resolving a disk by LUN sees a partial
+set. By the time you run it by hand, all of them are there, so the failure
+cannot reproduce.
+
+`volumes.sh` now waits for each LUN named in `DISK_MAP`, up to
+`LUN_WAIT_SECONDS` (default 120), calling `udevadm settle` on the first miss. A
+LUN that never appears is treated as a failure rather than skipped, because
+every entry in `DISK_MAP` is a disk Terraform attached.
+
+The general shape is worth remembering: anything in `runcmd` that depends on
+hardware enumeration, network readiness, or another agent's work needs to wait
+for it. Boot-time races do not reproduce interactively.
+
 ### `mkfs.xfs: command not found`
 
 `xfsprogs` is not guaranteed on a cloud image. It is in the base package list in

@@ -25,6 +25,13 @@
 # /dev/disk/azure/scsi1/lunN; the generic SCSI by-path form is the fallback and
 # is what the Hyper-V path uses.
 #
+# Those symlinks are not present the moment cloud-init runs. The agent creates
+# them as it enumerates the data disks, so early in boot only some LUNs exist.
+# Every disk named in DISK_MAP is expected to be attached, so this script waits
+# for each one and fails if it never appears, rather than silently provisioning
+# a subset. Running the script by hand later always works, which is what makes
+# this race easy to miss.
+#
 # SDP expects the hx* names. This script mounts the p4* names and symlinks the
 # hx* paths onto them, so SDP tooling runs unmodified.
 set -euo pipefail
@@ -35,7 +42,24 @@ ROLE="${1:?role required}"
 trap 'echo "[volumes] FAILED at line $LINENO: $BASH_COMMAND" >&2' ERR
 SERVERLOCKS_MB="${SERVERLOCKS_MB:-1024}"
 DISK_MAP="${DISK_MAP:-}"
+LUN_WAIT_SECONDS="${LUN_WAIT_SECONDS:-120}"
 FSTYPE="${FSTYPE:-xfs}"
+
+wait_for_lun() {  # wait_for_lun <lun> <label> -> device path on stdout
+  local lun="$1" label="$2" waited=0 dev=""
+  while (( waited < LUN_WAIT_SECONDS )); do
+    dev="$(resolve_lun "$lun")"
+    [[ -n "$dev" ]] && { echo "$dev"; return 0; }
+    if (( waited == 0 )); then
+      echo "[volumes] waiting for LUN $lun ($label) to appear" >&2
+      udevadm settle --timeout=10 >/dev/null 2>&1 || true
+    fi
+    sleep 2
+    waited=$(( waited + 2 ))
+  done
+  echo "[volumes] LUN $lun ($label) did not appear after ${LUN_WAIT_SECONDS}s" >&2
+  return 1
+}
 
 resolve_lun() {  # resolve_lun <lun> -> device path on stdout, empty if absent
   local lun="$1" dev=""
@@ -54,11 +78,9 @@ resolve_lun() {  # resolve_lun <lun> -> device path on stdout, empty if absent
 
 prepare_disk() {  # prepare_disk <label> <lun>
   local label="$1" lun="$2" dev existing
-  dev="$(resolve_lun "$lun")"
-  if [[ -z "$dev" ]]; then
-    echo "[volumes] no disk at LUN $lun for $label -- not attached for this role"
-    return 0
-  fi
+  # Every entry in DISK_MAP is a disk Terraform attached, so a LUN that never
+  # appears is a failure, not an absent optional volume.
+  dev="$(wait_for_lun "$lun" "$label")"
 
   existing="$(blkid -o value -s LABEL "$dev" 2>/dev/null || true)"
   if [[ -z "$existing" ]]; then
