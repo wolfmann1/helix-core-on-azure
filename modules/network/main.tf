@@ -10,6 +10,7 @@ resource "azurerm_virtual_network" "this" {
 }
 
 resource "azurerm_subnet" "this" {
+  # checkov:skip=CKV2_AZURE_31:The commit, edge, proxy and app subnets each have an NSG associated below; this graph check does not resolve the for_each. AzureBastionSubnet is genuinely without one, because Bastion requires a specific inbound rule set and an incorrect NSG breaks the service outright. See the TODO below.
   for_each             = var.subnet_prefixes
   name                 = each.key == "mgmt" ? "AzureBastionSubnet" : "${var.name_prefix}-snet-${each.key}"
   resource_group_name  = var.resource_group_name
@@ -64,3 +65,9 @@ resource "azurerm_subnet_network_security_group_association" "this" {
   subnet_id                 = azurerm_subnet.this[each.key].id
   network_security_group_id = each.value.id
 }
+
+# TODO(chris): NSG for AzureBastionSubnet. Bastion requires specific inbound
+# rules (GatewayManager and AzureLoadBalancer on 443, the control plane ports)
+# and an NSG missing any of them disables the service rather than degrading it.
+# Worth building deliberately rather than copying, since getting it wrong is
+# how people lock themselves out of their own management path.

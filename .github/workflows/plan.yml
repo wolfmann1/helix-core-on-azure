@@ -27,6 +27,9 @@ jobs:
 
       - run: pip install checkov==3.2.477
 
+      - name: tflint --init
+        run: tflint --init --config="$GITHUB_WORKSPACE/.tflint.hcl"
+
       - name: Static checks
         run: ./scripts/ci-checks.sh ${{ matrix.environment }}
 

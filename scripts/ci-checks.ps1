@@ -98,6 +98,12 @@ try {
   }
 
   if (Test-Tool tflint) {
+    # Plugins named in .tflint.hcl are downloaded on demand, not bundled.
+    # Without this, every directory fails with "Plugin azurerm not found".
+    Invoke-Step 'tflint --init' {
+      tflint --init --config="$root\.tflint.hcl"
+    } -ContinueOnError
+
     Invoke-Step 'tflint' {
       tflint --recursive --config="$root\.tflint.hcl"
     } -ContinueOnError

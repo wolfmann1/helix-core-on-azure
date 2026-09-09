@@ -85,6 +85,7 @@ resource "azurerm_network_interface" "this" {
 }
 
 resource "azurerm_linux_virtual_machine" "this" {
+  # checkov:skip=CKV_AZURE_50:This check flags VM extensions. None are installed; configuration is done through cloud-init and the scripts in provisioning/, which is what keeps the Hyper-V path working.
   name                            = var.name
   location                        = var.location
   resource_group_name             = var.resource_group_name
@@ -125,6 +126,7 @@ resource "azurerm_linux_virtual_machine" "this" {
 }
 
 resource "azurerm_managed_disk" "data" {
+  # checkov:skip=CKV_AZURE_93:Customer-managed key encryption needs a Key Vault key and disk encryption set that this environment does not warrant. Platform-managed keys are in use.
   for_each             = local.data_disks
   name                 = "${var.name}-${each.key}"
   location             = var.location
@@ -133,6 +135,9 @@ resource "azurerm_managed_disk" "data" {
   create_option        = "Empty"
   disk_size_gb         = each.value.size_gb
   zone                 = var.zone
+  # Disks are reached over the VNet only; there is no need for the disk export
+  # endpoint to be publicly resolvable.
+  public_network_access_enabled = false
   tags                 = merge(var.tags, { volume = each.key })
 }
 

@@ -34,6 +34,11 @@ resource "azurerm_resource_group" "state" {
 }
 
 resource "azurerm_storage_account" "state" {
+  # checkov:skip=CKV_AZURE_206:LRS is deliberate. This account holds Terraform state for a lab; the cost of GRS is not justified and state is reproducible.
+  # checkov:skip=CKV2_AZURE_1:Customer-managed keys would require a Key Vault that this configuration bootstraps before any Key Vault exists.
+  # checkov:skip=CKV_AZURE_33:Queue service logging is not relevant; this account holds blobs only.
+  # checkov:skip=CKV_AZURE_59:Public network access stays enabled because the GitHub Actions runners reach this account over the internet. Anonymous access is disabled and account keys are turned off, so access requires an Entra ID identity.
+  # checkov:skip=CKV2_AZURE_33:Same reason. A private endpoint would require a self-hosted runner inside the VNet.
   name                            = "p4tfstate${random_string.s.result}"
   resource_group_name             = azurerm_resource_group.state.name
   location                        = var.location
@@ -42,6 +47,11 @@ resource "azurerm_storage_account" "state" {
   min_tls_version                 = "TLS1_2"
   allow_nested_items_to_be_public = false
   shared_access_key_enabled       = false # force Entra ID auth; no account keys
+
+  sas_policy {
+    expiration_period = "00.01:00:00"
+    expiration_action = "Log"
+  }
 
   blob_properties {
     versioning_enabled = true

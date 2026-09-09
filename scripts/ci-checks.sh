@@ -14,5 +14,7 @@ if [[ "$FIX" == "--fix" ]]; then terraform fmt -recursive; else terraform fmt -c
 echo "::endgroup::"
 echo "::group::init";     terraform -chdir="envs/$ENVIRONMENT" init -backend=false; echo "::endgroup::"
 echo "::group::validate"; terraform -chdir="envs/$ENVIRONMENT" validate;  echo "::endgroup::"
-echo "::group::tflint";   tflint --recursive --config="$PWD/.tflint.hcl"; echo "::endgroup::"
+# Plugins named in .tflint.hcl are downloaded on demand, not bundled.
+echo "::group::tflint-init"; tflint --init --config="$PWD/.tflint.hcl"; echo "::endgroup::"
+echo "::group::tflint";      tflint --recursive --config="$PWD/.tflint.hcl"; echo "::endgroup::"
 echo "::group::checkov";  checkov -d . --framework terraform --quiet --compact --soft-fail-on LOW; echo "::endgroup::"
