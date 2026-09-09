@@ -149,11 +149,20 @@ resource "azurerm_virtual_machine_data_disk_attachment" "data" {
   caching            = each.value.caching
 }
 
-resource "azurerm_key_vault_access_policy" "this" {
-  count        = var.key_vault_id == "" ? 0 : 1
-  key_vault_id = var.key_vault_id
-  tenant_id    = azurerm_linux_virtual_machine.this.identity[0].tenant_id
-  object_id    = azurerm_linux_virtual_machine.this.identity[0].principal_id
-
-  secret_permissions = ["Get", "List"]
+# Grant the node's managed identity read access to the Key Vault.
+#
+# count cannot test var.key_vault_id, because that value comes from the Key
+# Vault resource and is unknown until apply: "The count value depends on
+# resource attributes that cannot be determined until apply". The gate has to
+# be a value Terraform knows while building the graph, so it is an explicit
+# bool the caller sets alongside the id.
+#
+# The vault uses RBAC authorisation rather than access policies, so this is a
+# role assignment. Key Vault Secrets User is read-only on secret values, which
+# is all a node needs.
+resource "azurerm_role_assignment" "key_vault_secrets" {
+  count                = var.grant_key_vault_access ? 1 : 0
+  scope                = var.key_vault_id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_linux_virtual_machine.this.identity[0].principal_id
 }

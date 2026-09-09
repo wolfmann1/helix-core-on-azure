@@ -1,6 +1,6 @@
 location       = "canadacentral"
 alert_email    = "clesemann@gmail.com"
-ssh_public_key = "ssh-ed25519 REPLACE_ME"
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKPVLh9iBBzprRNCe+JzTc4OAk8ZQbMlwaPO8vH+9Kmd juwel@cl-gaming-pc"
 install_sdp    = true
 
 # OS is pinned by modules/p4-node's os_image default: Ubuntu 24.04 LTS.

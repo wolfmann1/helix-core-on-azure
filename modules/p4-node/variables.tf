@@ -189,9 +189,22 @@ variable "ssh_public_key" {
 }
 
 variable "key_vault_id" {
-  description = "Key Vault the node's managed identity is granted read access to."
+  description = "Key Vault the node's managed identity is granted read access to. Only used when grant_key_vault_access is true."
   type        = string
   default     = ""
+}
+
+variable "grant_key_vault_access" {
+  description = <<-EOT
+    Grant this node's managed identity the Key Vault Secrets User role on
+    var.key_vault_id.
+
+    This is a separate flag rather than a test of key_vault_id because the id
+    comes from the Key Vault resource and is unknown at plan time, and count
+    cannot depend on a value Terraform does not yet know.
+  EOT
+  type    = bool
+  default = false
 }
 
 variable "tags" {

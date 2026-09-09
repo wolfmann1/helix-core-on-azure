@@ -58,7 +58,8 @@ module "commit" {
   vm_size              = "Standard_B2ats_v2"
   ssh_public_key       = var.ssh_public_key
   install_sdp          = var.install_sdp
-  key_vault_id         = module.storage.key_vault_id
+  key_vault_id           = module.storage.key_vault_id
+  grant_key_vault_access = true
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
@@ -90,7 +91,8 @@ module "edge" {
   ssh_public_key       = var.ssh_public_key
   install_sdp          = var.install_sdp
   commit_host          = module.commit.private_ip
-  key_vault_id         = module.storage.key_vault_id
+  key_vault_id           = module.storage.key_vault_id
+  grant_key_vault_access = true
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata
@@ -150,7 +152,8 @@ module "swarm" {
   ssh_public_key       = var.ssh_public_key
   install_sdp          = false
   commit_host          = module.commit.private_ip
-  key_vault_id         = module.storage.key_vault_id
+  key_vault_id           = module.storage.key_vault_id
+  grant_key_vault_access = true
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata

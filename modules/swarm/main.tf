@@ -14,7 +14,8 @@ module "node" {
   ssh_public_key       = var.ssh_public_key
   install_sdp          = var.install_sdp
   commit_host          = var.commit_host
-  key_vault_id         = var.key_vault_id
+  key_vault_id           = var.key_vault_id
+  grant_key_vault_access = var.grant_key_vault_access
   disk_tier            = var.disk_tier
   disk_sizes_gb        = var.disk_sizes_gb
   split_metadata       = var.split_metadata

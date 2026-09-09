@@ -110,6 +110,20 @@ than a service principal secret. The state storage account sets
 `shared_access_key_enabled = false`, requiring Entra ID authentication. Nothing
 long-lived is written to the repository, to state, or to cloud-init.
 
+### Key Vault uses RBAC, and access is granted by an explicit flag
+
+The vault sets `rbac_authorization_enabled = true`, so node identities are
+granted the **Key Vault Secrets User** role rather than an access policy entry.
+That role is read-only on secret values, which is all a node needs.
+
+Whether a node gets that grant is controlled by `grant_key_vault_access`, a
+bool, rather than by testing whether `key_vault_id` is empty. The id comes from
+the Key Vault resource and is unknown until apply, and `count` cannot depend on
+a value Terraform does not know while building the graph -- the plan fails with
+"The count value depends on resource attributes that cannot be determined until
+apply". Anything that decides whether a resource exists has to be knowable at
+plan time.
+
 ### One state file per environment
 
 A mistake in `dev` cannot corrupt `prod` state, and plan times stay short.

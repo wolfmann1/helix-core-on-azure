@@ -73,3 +73,9 @@ variable "zone" {
   type        = string
   default     = null
 }
+
+variable "grant_key_vault_access" {
+  description = "Grant this node's managed identity the Key Vault Secrets User role on var.key_vault_id. Separate from key_vault_id because count cannot depend on a value that is unknown at plan time."
+  type        = bool
+  default     = false
+}
