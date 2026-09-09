@@ -84,30 +84,48 @@ create straight after the assignment still returns 403.
 
 The first attempt at this configuration failed on
 `KeyBasedAuthenticationNotPermitted` while waiting for the storage account's
-data plane. Whether that leaves anything behind depends on how far the create
-got: Azure may roll the account back, or it may exist without being recorded in
-state. Check before assuming either:
+data plane. Three outcomes are possible, so check state first:
 
 ```powershell
-az storage account list -o json | ConvertFrom-Json |
-  Where-Object { $_.name -like 'p4tfstate*' } |
-  Select-Object name, resourceGroup, id
+terraform state list
 ```
 
-**If nothing is listed**, there is no orphan. Re-run `terraform apply`. The
-resource group and `random_string` are already in state, so the account is
-recreated with the same name.
+**1. The account is in state and tainted.** This is the usual outcome. Terraform
+taints a resource whose create failed partway, and a tainted resource is always
+planned as destroy-and-recreate -- which `prevent_destroy` then refuses, with
+"Instance cannot be destroyed".
 
-**If it is listed**, adopt it rather than deleting it -- the name is already
-correct, because `random_string` is in state and will generate the same suffix:
+The account itself is fine; only its post-create configuration (versioning,
+retention, tags) did not finish, and all of that is updatable in place. Clear
+the taint and let the next apply converge it:
 
 ```powershell
-terraform import azurerm_storage_account.state "<the id from above>"
+terraform untaint azurerm_storage_account.state
+terraform plan     # should now be "update in-place", not "destroy and then create"
 terraform apply
 ```
 
-Deleting it instead also works, but storage account names are globally unique
-and the name is not immediately reusable after a delete.
+Do not work around this by removing `prevent_destroy`. It stopped a
+destroy-and-recreate of the account holding state for every environment, which
+is what it is there for.
+
+**2. Not in state, but present in Azure.** Adopt it rather than deleting it --
+`random_string` is in state and regenerates the same suffix, and storage account
+names are globally unique and not immediately reusable after a delete:
+
+```powershell
+az storage account list -o json | ConvertFrom-Json |
+  Where-Object { $_.name -like 'p4tfstate*' } | Select-Object name, id
+
+terraform import azurerm_storage_account.state "<the id>"
+terraform apply
+```
+
+**3. Not in state and not in Azure.** Re-run `terraform apply`.
+
+Note that `az storage account list` can lag a failed create by a minute or two
+and report nothing while the account exists. `terraform state list` and a
+refresh are the more reliable check.
 
 ## 3. First environment
 
