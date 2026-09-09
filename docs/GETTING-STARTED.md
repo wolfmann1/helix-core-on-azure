@@ -187,6 +187,34 @@ Do not disable `prevent_deletion_if_contains_resources` to get past it. That
 flag makes every future destroy sweep anything sharing the group, tracked or
 not.
 
+#### Managed identity left behind in the old region
+
+A VM with a system-assigned identity has a service principal in Entra ID,
+stamped with the region the VM was in. Deleting the VM does not always delete
+that principal promptly. Recreating a VM with the same resource ID -- same
+subscription, resource group and name -- in a different region then fails:
+
+```
+FailedIdentityOperation: ... [AlreadyExistServicePrincipalInDifferentRegion]:
+Location mismatch in AAD and in Model. LocationInAAD: 'canadacentral',
+LocationInModel: 'canadaeast'
+```
+
+Confirm the principal belongs to the deleted VM, then remove it:
+
+```powershell
+az ad sp show --id <objectId from the error> --query "{name:displayName, type:servicePrincipalType}" -o json
+az ad sp delete --id <objectId from the error>
+```
+
+`displayName` should match the VM name and `servicePrincipalType` should be
+`ManagedIdentity`. Entra clears these up on its own eventually, and renaming the
+VM also avoids the collision, but deleting the orphan is the direct fix.
+
+This is worth knowing before a region migration of anything using managed
+identities: the identity is a directory object with its own lifecycle, and it
+does not move with the resource.
+
 ## 3. First environment
 
 Set `ssh_public_key` in `envs/dev/terraform.tfvars`, then:
