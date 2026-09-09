@@ -57,6 +57,26 @@ Copy the `storage_account_name` output into each `envs/*/backend.tf`.
 This configuration is applied once, by hand, with local state, because the state
 backend cannot store its own state.
 
+It also grants **Storage Blob Data Contributor** on the state account to whoever
+runs it. That is not optional: the backend uses `use_azuread_auth` and the
+account has `shared_access_key_enabled = false`, so Terraform reaches the blob
+data plane as the signed-in principal. Control-plane roles such as Owner do not
+grant data-plane access, and without the assignment `terraform init` in `envs/*`
+fails with a 403 on the state container.
+
+The pipeline's OIDC identity needs the same role. Grant it once after step 1:
+
+```powershell
+$sa = az storage account list -o json | ConvertFrom-Json |
+      Where-Object { $_.name -like 'p4tfstate*' }
+az role assignment create `
+  --role "Storage Blob Data Contributor" `
+  --assignee <the app registration's object id> `
+  --scope $sa.id
+```
+
+Role assignments can take a couple of minutes to take effect.
+
 ## 3. First environment
 
 Set `ssh_public_key` in `envs/dev/terraform.tfvars`, then:

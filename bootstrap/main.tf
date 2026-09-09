@@ -78,6 +78,23 @@ resource "azurerm_storage_container" "state" {
   }
 }
 
+data "azurerm_client_config" "current" {}
+
+# The backend sets use_azuread_auth and this account has account keys disabled,
+# so Terraform reaches the blob data plane as whoever is signed in. Control-plane
+# roles such as Owner do not grant data-plane access; without this assignment,
+# "terraform init" in envs/* fails with a 403 on the state container.
+resource "azurerm_role_assignment" "state_operator" {
+  scope                = azurerm_storage_account.state.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+output "state_operator_principal_id" {
+  description = "Principal granted data-plane access to the state container. The pipeline's OIDC identity needs the same role; see docs/GETTING-STARTED.md."
+  value       = data.azurerm_client_config.current.object_id
+}
+
 output "storage_account_name" {
   description = "Paste this into every envs/*/backend.tf."
   value       = azurerm_storage_account.state.name
