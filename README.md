@@ -129,11 +129,17 @@ A local Hyper-V option using the same provisioning scripts is documented in
   permitted by the lab guardrails. `Standard_B2pts_v2` is also permitted but is
   ARM64; using it would mean verifying Perforce and Swarm packaging for arm64
   first.
-- **SKU capacity is separate from SKU policy.** A size permitted by the
-  guardrails can still be refused with `SkuNotAvailable ... Capacity
-  Restrictions`, which varies by region, zone and subscription type. Check with
+- **x86_64 only.** Perforce's apt repository publishes `binary-amd64` and
+  `binary-i386` for Ubuntu, and no `binary-arm64`. p4d cannot be installed from
+  the vendor repository on an Ampere VM, so every `Standard_B*p*` size is
+  unusable regardless of policy or availability.
+- **SKU capacity is separate from SKU policy, and from architecture.** A size
+  permitted by the guardrails can still be refused with `SkuNotAvailable`, which
+  varies by region, zone and subscription type. On this subscription every x86
+  B-series size is `NotAvailableForSubscription` in canadacentral, while the
+  ARM sizes are available and unusable for the reason above. Check with
   `az vm list-skus --location <region> --size Standard_B --all -o table` before
-  choosing. `vm_size` is an environment variable so this is a one-line change.
+  choosing; `vm_size` is an environment variable so switching is one line.
 - **Alerts against custom tables need ingestion first.** Azure validates a
   scheduled query rule's KQL at creation and rejects a query against a table
   that does not exist. The seven alerts reading `*_CL` tables are held back by

@@ -36,9 +36,11 @@ variable "vm_size" {
     15 November 2028; VMs on those sizes are deallocated at that point. B v2
     is the recommended replacement, so this configuration uses it throughout.
 
-    Standard_B2ats_v2 is AMD x64. Standard_B2pts_v2 is also permitted by the
-    guardrails but is ARM64 (Ampere), which would require verifying Perforce
-    and Swarm packaging for arm64 first.
+    x86_64 is required. Perforce's apt repository publishes only binary-amd64
+    and binary-i386 for Ubuntu; there is no binary-arm64, so p4d cannot be
+    installed from the vendor repository on an Ampere VM. Every Standard_B*p*
+    size is ARM64 and is therefore unusable here regardless of what the lab
+    policy permits.
   EOT
   type        = string
   default     = "Standard_B2ats_v2"
