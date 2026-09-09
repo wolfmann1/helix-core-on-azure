@@ -40,8 +40,8 @@ variable "vm_size" {
     guardrails but is ARM64 (Ampere), which would require verifying Perforce
     and Swarm packaging for arm64 first.
   EOT
-  type    = string
-  default = "Standard_B2ats_v2"
+  type        = string
+  default     = "Standard_B2ats_v2"
 }
 
 variable "os_image" {

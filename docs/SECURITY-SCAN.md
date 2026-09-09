@@ -72,6 +72,11 @@ Split by whether the resource is meant to be destroyed.
 environment. An estate holding real depot content should add the lifecycle block
 by hand.
 
+A `tflint-ignore` comment must sit on the line immediately above the resource.
+Any other comment between the two voids it silently — the rule still fires and
+nothing reports that the annotation was ignored. Put the explanation above the
+annotation, not below it.
+
 ## Running the scan
 
 ```powershell
