@@ -5,8 +5,8 @@
 set -euo pipefail
 ROLE="${1:?role required}"
 
-BASE_DEBIAN="curl wget ca-certificates gnupg lsb-release rsync unzip jq chrony sysstat"
-BASE_RHEL="curl wget ca-certificates gnupg2 rsync unzip jq chrony sysstat"
+BASE_DEBIAN="curl wget ca-certificates gnupg lsb-release rsync unzip jq chrony sysstat xfsprogs"
+BASE_RHEL="curl wget ca-certificates gnupg2 rsync unzip jq chrony sysstat xfsprogs"
 
 # Swarm requires Apache 2.4 with the prefork MPM only, non-threaded PHP
 # 8.2-8.5, and Redis. Threaded PHP is unsupported because the P4 PHP API is

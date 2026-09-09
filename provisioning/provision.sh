@@ -18,6 +18,7 @@
 # map it used when attaching the disks, so the two cannot drift.
 #
 set -euo pipefail
+trap 'echo "[provision] FAILED at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 ROLE=""
 INSTALL_SDP="true"

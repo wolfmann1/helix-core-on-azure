@@ -29,6 +29,10 @@
 # hx* paths onto them, so SDP tooling runs unmodified.
 set -euo pipefail
 ROLE="${1:?role required}"
+
+# Report where a failure happened. set -e otherwise exits silently, which is
+# what made the first run look like it simply stopped.
+trap 'echo "[volumes] FAILED at line $LINENO: $BASH_COMMAND" >&2' ERR
 SERVERLOCKS_MB="${SERVERLOCKS_MB:-1024}"
 DISK_MAP="${DISK_MAP:-}"
 FSTYPE="${FSTYPE:-xfs}"
@@ -41,7 +45,11 @@ resolve_lun() {  # resolve_lun <lun> -> device path on stdout, empty if absent
     # Generic SCSI: host:bus:target:lun. Data disks sit on target 0.
     dev="$(readlink -f /dev/disk/by-path/*scsi-0:0:0:"${lun}" 2>/dev/null | head -1 || true)"
   fi
+  # Always succeed. Returning non-zero here aborts the caller under set -e,
+  # because the exit status of dev="$(resolve_lun ...)" is the substitution's.
+  # An absent disk is a normal condition, not an error.
   [[ -b "$dev" ]] && echo "$dev"
+  return 0
 }
 
 prepare_disk() {  # prepare_disk <label> <lun>

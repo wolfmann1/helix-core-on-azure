@@ -23,4 +23,8 @@ write_files:
 %{ endfor ~}
 
 runcmd:
-  - [ bash, -lc, "/opt/p4-provisioning/provision.sh ${provision_args} 2>&1 | tee /var/log/p4-provision.log" ]
+  # pipefail matters: without it the exit status of the pipeline is tee's, so a
+  # failing provision.sh reports success and cloud-init says "done, errors: []".
+  # stdbuf keeps the log line-buffered, so it reflects progress instead of
+  # appearing in 4 KB chunks when the pipe flushes.
+  - [ bash, -lc, "set -o pipefail; stdbuf -oL -eL /opt/p4-provisioning/provision.sh ${provision_args} 2>&1 | tee /var/log/p4-provision.log; echo \"provision.sh exit=$?\" | tee -a /var/log/p4-provision.log" ]

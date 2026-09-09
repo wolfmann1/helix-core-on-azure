@@ -394,6 +394,76 @@ curl http://package.perforce.com/apt/ubuntu/dists/noble/release/
 
 ---
 
+## Provisioning
+
+### `cloud-init status` says `done, errors: []` but provisioning stopped
+
+The exit status of a pipeline is the exit status of its **last** command. With
+
+```yaml
+- [ bash, -lc, "provision.sh ARGS 2>&1 | tee /var/log/p4-provision.log" ]
+```
+
+the status is `tee`'s, which is always 0, so a failing script reports success
+and cloud-init records no error. Set `pipefail`:
+
+```yaml
+- [ bash, -lc, "set -o pipefail; stdbuf -oL -eL provision.sh ARGS 2>&1 | tee /var/log/p4-provision.log; echo \"provision.sh exit=$?\" | tee -a /var/log/p4-provision.log" ]
+```
+
+`stdbuf -oL` matters too: writing to a pipe makes libc block-buffer stdout, so
+the log appears in 4 KB chunks and the last thing it shows is not necessarily
+where the script stopped.
+
+### The log just stops, with no error
+
+`set -e` exits silently. Add an ERR trap so the failing line reports itself:
+
+```bash
+trap 'echo "[script] FAILED at line $LINENO: $BASH_COMMAND" >&2' ERR
+```
+
+A specific trap for this: a function whose **last command** is a test.
+
+```bash
+resolve_lun() {
+  ...
+  [[ -b "$dev" ]] && echo "$dev"     # returns 1 when the test is false
+}
+dev="$(resolve_lun "$lun")"          # assignment takes the substitution's status
+                                     # -> set -e aborts the whole script
+```
+
+Add an explicit `return 0` when the condition is a normal outcome rather than an
+error.
+
+### Running provisioning by hand
+
+Faster than re-applying to test a change:
+
+```powershell
+az vm run-command invoke -g p4-dev-rg -n p4-dev-cae-commit-01 `
+  --command-id RunShellScript `
+  --scripts "bash -x /opt/p4-provisioning/common/volumes.sh commit 2>&1 | tail -60"
+```
+
+Set the environment the script expects first if it reads any:
+
+```powershell
+--scripts "export DISK_MAP='p4db=0,p4db2=1,p4logs=2,p4depots=3'; bash -x /opt/p4-provisioning/common/volumes.sh commit 2>&1 | tail -60"
+```
+
+`bash -x` prints each command before running it, which locates the stop
+precisely.
+
+### `mkfs.xfs: command not found`
+
+`xfsprogs` is not guaranteed on a cloud image. It is in the base package list in
+`provisioning/common/packages.sh`; if a role skips package installation, the
+format step fails.
+
+---
+
 ## Windows
 
 ### `].{name:name was unexpected at this time`
