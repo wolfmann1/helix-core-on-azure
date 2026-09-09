@@ -8,6 +8,12 @@ resource "random_string" "sa" {
   special = false
 }
 
+# tflint-ignore: azurerm_resources_missing_prevent_destroy
+# prevent_destroy is deliberately absent. These environments are applied on
+# demand and torn down with scripts/teardown.ps1, and prevent_destroy would
+# block that. The state backend in bootstrap/ does set it, because destroying
+# state is never routine. Set checkpoint_replication and add the lifecycle
+# block by hand for an estate holding real depot content.
 resource "azurerm_storage_account" "checkpoints" {
   # checkov:skip=CKV_AZURE_206:LRS is a deliberate cost choice for a lab that is rebuilt often. Set checkpoint_replication to GRS for anything holding real depot content.
   # checkov:skip=CKV2_AZURE_1:Customer-managed key encryption needs a Key Vault key and rotation policy that this environment does not warrant. Platform-managed keys are in use.
@@ -39,14 +45,19 @@ resource "azurerm_storage_account" "checkpoints" {
   }
 }
 
+# tflint-ignore: azurerm_resources_missing_prevent_destroy
 resource "azurerm_storage_container" "checkpoints" {
-  name                  = "checkpoints"
+  # checkov:skip=CKV2_AZURE_21:Blob read logging on the checkpoint container has no audience here and adds cost; write and delete operations are already captured by the account's activity log.
+  name = "checkpoints"
   storage_account_id    = azurerm_storage_account.checkpoints.id
   container_access_type = "private"
 }
 
 data "azurerm_client_config" "current" {}
 
+# tflint-ignore: azurerm_resources_missing_prevent_destroy
+# Same reason as the storage account above. Note that purge_protection_enabled
+# is true, so a destroyed vault is recoverable within the soft-delete window.
 resource "azurerm_key_vault" "this" {
   # checkov:skip=CKV2_AZURE_32:Private endpoints are not created here yet. Public network access is disabled and network_acls default to Deny. See the TODO below.
   name                          = "${var.name_prefix}-kv-${random_string.sa.result}"

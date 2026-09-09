@@ -17,7 +17,7 @@ variable "subnet_id" {
 variable "vm_size" {
   description = "VM size. Default is the smallest that runs this role."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_B2ats_v2"
 }
 variable "ssh_public_key" {
   description = "SSH public key for the admin account."

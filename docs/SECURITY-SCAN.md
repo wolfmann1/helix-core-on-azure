@@ -39,6 +39,39 @@ inbound rule set — GatewayManager and AzureLoadBalancer on 443, plus the contr
 plane ports — and an NSG missing any of them disables the service rather than
 degrading it. Worth building deliberately. TODO in `modules/network`.
 
+## tflint
+
+First run after `tflint --init`: 26 issues, in two groups.
+
+### Retired VM sizes (`azurerm_linux_virtual_machine_retired_size`)
+
+Every node was on B-series v1. Microsoft has announced retirement of B v1 for
+**15 November 2028**; VMs still on those sizes are deallocated and cannot be
+restarted, though disk data survives. B v2 is the documented replacement.
+
+Moved to `Standard_B2ats_v2` throughout. It is AMD x64, so nothing about the
+image or the Perforce packaging changes, and it is already on the `az104-lab`
+allow-list. `Standard_B2pts_v2` is also allowed but is ARM64 (Ampere); using it
+would mean verifying Perforce and Swarm packaging for arm64 first.
+
+One consequence: the broker and proxy roles were on `Standard_B1s` (1 vCPU) and
+are now on a 2 vCPU SKU, because `B2ats_v2` is the smallest v2 size the
+guardrails permit. Adding `Standard_B1as_v2` to `allowedVmSkus` in
+`az104-lab/guardrails.bicep` would allow those two roles to go smaller again.
+
+### Missing `prevent_destroy` (`azurerm_resources_missing_prevent_destroy`)
+
+Split by whether the resource is meant to be destroyed.
+
+| Resource | Decision |
+|---|---|
+| `bootstrap` state account and container | `prevent_destroy = true` added. Destroying these destroys state for every environment. |
+| `modules/storage` checkpoint account, container, Key Vault | Left destroyable, with `tflint-ignore` and the reason inline. These environments are applied on demand and torn down with `teardown.ps1`; `prevent_destroy` would block that. The Key Vault has `purge_protection_enabled`, so it is recoverable within the soft-delete window. |
+
+`prevent_destroy` takes a literal, not a variable, so it cannot be toggled per
+environment. An estate holding real depot content should add the lifecycle block
+by hand.
+
 ## Running the scan
 
 ```powershell

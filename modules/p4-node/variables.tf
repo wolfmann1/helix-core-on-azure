@@ -28,9 +28,20 @@ variable "subnet_id" {
 }
 
 variable "vm_size" {
-  description = "Azure VM size. Defaults are the smallest that will run the role, since these environments exercise the architecture rather than serve production load."
-  type        = string
-  default     = "Standard_B2s"
+  description = <<-EOT
+    Azure VM size. The default is the smallest B v2 SKU permitted by the
+    az104-lab guardrails.
+
+    B-series v1 (Standard_B1s, Standard_B2s) is announced for retirement on
+    15 November 2028; VMs on those sizes are deallocated at that point. B v2
+    is the recommended replacement, so this configuration uses it throughout.
+
+    Standard_B2ats_v2 is AMD x64. Standard_B2pts_v2 is also permitted by the
+    guardrails but is ARM64 (Ampere), which would require verifying Perforce
+    and Swarm packaging for arm64 first.
+  EOT
+  type    = string
+  default = "Standard_B2ats_v2"
 }
 
 variable "os_image" {

@@ -138,7 +138,7 @@ resource "azurerm_managed_disk" "data" {
   # Disks are reached over the VNet only; there is no need for the disk export
   # endpoint to be publicly resolvable.
   public_network_access_enabled = false
-  tags                 = merge(var.tags, { volume = each.key })
+  tags                          = merge(var.tags, { volume = each.key })
 }
 
 resource "azurerm_virtual_machine_data_disk_attachment" "data" {

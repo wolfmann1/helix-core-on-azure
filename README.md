@@ -123,6 +123,12 @@ A local Hyper-V option using the same provisioning scripts is documented in
   requirement is 4 vCPU and 8 GB RAM per component, which is larger than the
   whole dev environment, so it is disabled by default and enabled explicitly
   per environment.
+- **VM sizes: B-series v2.** B v1 (`Standard_B1s`, `Standard_B2s`) is announced
+  for retirement on 15 November 2028, at which point VMs on those sizes are
+  deallocated. Every role here uses `Standard_B2ats_v2`, which is AMD x64 and
+  permitted by the lab guardrails. `Standard_B2pts_v2` is also permitted but is
+  ARM64; using it would mean verifying Perforce and Swarm packaging for arm64
+  first.
 - **Lab subscription policy.** If the `az104-lab` guardrails are deployed on the
   target subscription, they deny any VM SKU outside `Standard_B2pts_v2`,
   `Standard_B2ats_v2`, `Standard_B1s` and `Standard_B2s`, and any region outside

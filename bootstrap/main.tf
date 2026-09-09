@@ -53,6 +53,12 @@ resource "azurerm_storage_account" "state" {
     expiration_action = "Log"
   }
 
+  # Destroying this account destroys the state for every environment. Removing
+  # it is a deliberate act that should require editing this file first.
+  lifecycle {
+    prevent_destroy = true
+  }
+
   blob_properties {
     versioning_enabled = true
     delete_retention_policy {
@@ -62,9 +68,14 @@ resource "azurerm_storage_account" "state" {
 }
 
 resource "azurerm_storage_container" "state" {
-  name                  = "tfstate"
+  # checkov:skip=CKV2_AZURE_21:Blob read logging on the state container has no audience here and adds cost; write and delete operations are already captured by the account's activity log.
+  name = "tfstate"
   storage_account_id    = azurerm_storage_account.state.id
   container_access_type = "private"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 output "storage_account_name" {
