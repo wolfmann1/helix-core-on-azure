@@ -48,7 +48,7 @@ resource "azurerm_storage_account" "checkpoints" {
 # tflint-ignore: azurerm_resources_missing_prevent_destroy
 resource "azurerm_storage_container" "checkpoints" {
   # checkov:skip=CKV2_AZURE_21:Blob read logging on the checkpoint container has no audience here and adds cost; write and delete operations are already captured by the account's activity log.
-  name = "checkpoints"
+  name                  = "checkpoints"
   storage_account_id    = azurerm_storage_account.checkpoints.id
   container_access_type = "private"
 }

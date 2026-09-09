@@ -69,7 +69,7 @@ resource "azurerm_storage_account" "state" {
 
 resource "azurerm_storage_container" "state" {
   # checkov:skip=CKV2_AZURE_21:Blob read logging on the state container has no audience here and adds cost; write and delete operations are already captured by the account's activity log.
-  name = "tfstate"
+  name                  = "tfstate"
   storage_account_id    = azurerm_storage_account.state.id
   container_access_type = "private"
 

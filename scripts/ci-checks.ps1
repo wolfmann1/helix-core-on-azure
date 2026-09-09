@@ -83,10 +83,29 @@ try {
 
   # terraform fmt parses before it formats, so a syntax error surfaces here
   # rather than at validate. The message names the file and line.
+  #
+  # Exit codes differ in kind: 2 is a parse error, 3 means the files are valid
+  # but not canonically formatted. Locally the second is not worth stopping for,
+  # so it continues and prints the fix. The pipeline still treats it as fatal.
   if ($Fix) {
     Invoke-Step 'terraform fmt -recursive (rewriting)' { terraform fmt -recursive }
   } else {
-    Invoke-Step 'terraform fmt' { terraform fmt -check -recursive }
+    Write-Host ""
+    Write-Host "== terraform fmt" -ForegroundColor Cyan
+    $fmtOut = terraform fmt -check -recursive 2>&1
+    $fmtCode = $LASTEXITCODE
+    if ($fmtCode -eq 0) {
+      Write-Host "   ok" -ForegroundColor Green
+    } elseif ($fmtCode -eq 3) {
+      $fmtOut | ForEach-Object { Write-Host "   $_" }
+      Write-Host "   formatting only. Run: .\scripts\ci-checks.ps1 -Fix" -ForegroundColor Yellow
+      $failed += 'terraform fmt (formatting)'
+    } else {
+      $fmtOut | ForEach-Object { Write-Host "   $_" -ForegroundColor Red }
+      Write-Host "   FAILED: parse error" -ForegroundColor Red
+      $failed += 'terraform fmt (parse error)'
+      throw "terraform fmt could not parse the configuration"
+    }
   }
 
   Invoke-Step 'terraform init (no backend)' {
@@ -129,9 +148,10 @@ finally {
 Write-Host ""
 if ($failed.Count -gt 0) {
   Write-Host "FAILED: $($failed -join ', ')" -ForegroundColor Red
-  if ($failed -match 'fmt') {
+  if ($failed -match 'formatting') {
     Write-Host ""
-    Write-Host "If the failure is formatting rather than a syntax error, re-run with -Fix." -ForegroundColor Yellow
+    Write-Host "Formatting is the only thing here a machine can correct." -ForegroundColor Yellow
+    Write-Host "Run .\scripts\ci-checks.ps1 -Fix and commit the result." -ForegroundColor Yellow
   }
   exit 1
 }
