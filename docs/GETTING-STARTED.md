@@ -164,7 +164,28 @@ terraform -chdir=envs/dev apply
 
 If an apply already failed this way, state now holds resources that no longer
 exist. `destroy` reconciles that -- it refreshes, finds them gone, and drops
-them from state -- so run the sequence above from step 1.
+them from state.
+
+The reverse also happens: a failed apply can leave resources in Azure that are
+**not** in state, because the apply errored before recording them. `destroy`
+then does not know about them, and deleting the resource group fails with:
+
+```
+Error: deleting Resource Group "p4-dev-rg": the Resource Group still contains Resources.
+```
+
+That check is deliberate -- the provider will not sweep resources it did not
+create. Keep it on: it turns drift into a visible event. Clear the group by hand
+instead:
+
+```powershell
+az group delete -n p4-dev-rg --yes
+az group show -n p4-dev-rg      # repeat until ResourceNotFound
+```
+
+Do not disable `prevent_deletion_if_contains_resources` to get past it. That
+flag makes every future destroy sweep anything sharing the group, tracked or
+not.
 
 ## 3. First environment
 

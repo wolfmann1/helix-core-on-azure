@@ -42,8 +42,9 @@ module "network" {
 }
 
 module "storage" {
-  source              = "../../modules/storage"
-  name_prefix         = local.prefix
+  source                     = "../../modules/storage"
+  key_vault_purge_protection = var.key_vault_purge_protection
+  name_prefix                = local.prefix
   location            = var.location
   resource_group_name = azurerm_resource_group.this.name
   tags                = local.tags

@@ -27,3 +27,8 @@ split_metadata       = true
 separate_sdp_volumes = true
 serverlocks_tmpfs_mb = 1024
 zone                 = "1"
+
+# prod is the one environment where a deleted vault should be recoverable.
+# Note this is one-way: Azure does not allow purge protection to be disabled
+# once a vault has it.
+key_vault_purge_protection = true

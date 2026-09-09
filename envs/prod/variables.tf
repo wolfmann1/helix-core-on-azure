@@ -106,3 +106,9 @@ variable "vm_size" {
   type    = string
   default = "Standard_B2ats_v2"
 }
+
+variable "key_vault_purge_protection" {
+  description = "Enable Key Vault purge protection. False lets a torn-down environment be rebuilt under the same vault name; see modules/storage."
+  type        = bool
+  default     = false
+}

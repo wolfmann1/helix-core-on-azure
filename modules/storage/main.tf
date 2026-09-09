@@ -73,8 +73,10 @@ resource "azurerm_storage_container" "checkpoints" {
 
 data "azurerm_client_config" "current" {}
 
-# Same reason as the storage account above. Note that purge_protection_enabled
-# is true, so a destroyed vault is recoverable within the soft-delete window.
+# Same reason as the storage account above. Purge protection is off by default
+# here so a torn-down environment can be rebuilt under the same name; prod sets
+# key_vault_purge_protection = true, where recoverability matters more than
+# rebuild speed.
 # tflint-ignore: azurerm_resources_missing_prevent_destroy
 resource "azurerm_key_vault" "this" {
   # checkov:skip=CKV2_AZURE_32:Private endpoints are not created here yet. Public network access is disabled and network_acls default to Deny. See the TODO below.
@@ -86,8 +88,8 @@ resource "azurerm_key_vault" "this" {
   # RBAC rather than access policies. Node identities are granted the
   # Key Vault Secrets User role in modules/p4-node.
   rbac_authorization_enabled = true
-  purge_protection_enabled      = true
-  soft_delete_retention_days    = 7
+  purge_protection_enabled      = var.key_vault_purge_protection
+  soft_delete_retention_days    = var.key_vault_soft_delete_days
   public_network_access_enabled = false
   tags                          = var.tags
 
