@@ -45,12 +45,30 @@ resource "azurerm_storage_account" "checkpoints" {
   }
 }
 
+# Creating a container is a data-plane call, and this account has account keys
+# disabled, so the caller needs a data-plane role. Control-plane roles such as
+# Owner do not grant it.
+resource "azurerm_role_assignment" "checkpoints_operator" {
+  scope                = azurerm_storage_account.checkpoints.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+# RBAC is eventually consistent; a data-plane call immediately after the
+# assignment still gets a 403.
+resource "time_sleep" "rbac_propagation" {
+  depends_on      = [azurerm_role_assignment.checkpoints_operator]
+  create_duration = "60s"
+}
+
 # tflint-ignore: azurerm_resources_missing_prevent_destroy
 resource "azurerm_storage_container" "checkpoints" {
   # checkov:skip=CKV2_AZURE_21:Blob read logging on the checkpoint container has no audience here and adds cost; write and delete operations are already captured by the account's activity log.
   name                  = "checkpoints"
   storage_account_id    = azurerm_storage_account.checkpoints.id
   container_access_type = "private"
+
+  depends_on = [time_sleep.rbac_propagation]
 }
 
 data "azurerm_client_config" "current" {}

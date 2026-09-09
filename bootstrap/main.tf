@@ -9,10 +9,19 @@ terraform {
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
     random  = { source = "hashicorp/random", version = "~> 3.6" }
+    time    = { source = "hashicorp/time", version = "~> 0.12" }
   }
 }
 
 provider "azurerm" {
+  # The provider polls a new storage account's data plane to confirm the Blob
+  # service is up, and does that with key-based auth unless told otherwise.
+  # Both storage accounts here set shared_access_key_enabled = false, so that
+  # poll returns "403 Key based authentication is not permitted on this storage
+  # account" and the create fails after the account already exists.
+  # storage_use_azuread makes every data-plane call use Entra ID instead.
+  storage_use_azuread = true
+
   features {}
 }
 
@@ -67,11 +76,20 @@ resource "azurerm_storage_account" "state" {
   }
 }
 
+resource "time_sleep" "rbac_propagation" {
+  depends_on      = [azurerm_role_assignment.state_operator]
+  create_duration = "60s"
+}
+
 resource "azurerm_storage_container" "state" {
   # checkov:skip=CKV2_AZURE_21:Blob read logging on the state container has no audience here and adds cost; write and delete operations are already captured by the account's activity log.
   name                  = "tfstate"
   storage_account_id    = azurerm_storage_account.state.id
   container_access_type = "private"
+
+  # Creating the container is a data-plane call. It needs the role assignment
+  # above to have propagated, which is why the wait exists.
+  depends_on = [time_sleep.rbac_propagation]
 
   lifecycle {
     prevent_destroy = true

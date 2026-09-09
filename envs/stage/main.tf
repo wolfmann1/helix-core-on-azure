@@ -6,10 +6,19 @@ terraform {
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
     random  = { source = "hashicorp/random", version = "~> 3.6" }
+    time    = { source = "hashicorp/time", version = "~> 0.12" }
   }
 }
 
 provider "azurerm" {
+  # The provider polls a new storage account's data plane to confirm the Blob
+  # service is up, and does that with key-based auth unless told otherwise.
+  # Both storage accounts here set shared_access_key_enabled = false, so that
+  # poll returns "403 Key based authentication is not permitted on this storage
+  # account" and the create fails after the account already exists.
+  # storage_use_azuread makes every data-plane call use Entra ID instead.
+  storage_use_azuread = true
+
   features {}
 }
 

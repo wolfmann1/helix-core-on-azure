@@ -75,7 +75,36 @@ az role assignment create `
   --scope $sa.id
 ```
 
-Role assignments can take a couple of minutes to take effect.
+Role assignments can take a couple of minutes to take effect. `bootstrap` and
+`modules/storage` both wait 60 seconds after assigning the role before making
+the first data-plane call, because RBAC is eventually consistent and a container
+create straight after the assignment still returns 403.
+
+### If the first apply failed partway
+
+The first attempt at this configuration failed on
+`KeyBasedAuthenticationNotPermitted` while waiting for the storage account's
+data plane. The account was created in Azure but not recorded in state, so a
+second apply tries to create a name that already exists.
+
+Check whether it is there:
+
+```powershell
+az storage account list -o json | ConvertFrom-Json |
+  Where-Object { $_.name -like 'p4tfstate*' } |
+  Select-Object name, resourceGroup, id
+```
+
+If it exists, adopt it rather than deleting it -- the name is already correct,
+because `random_string` is in state and will generate the same suffix:
+
+```powershell
+terraform import azurerm_storage_account.state "<the id from above>"
+terraform apply
+```
+
+Deleting it instead also works, but storage account names are globally unique
+and the name is not immediately reusable after a delete.
 
 ## 3. First environment
 
