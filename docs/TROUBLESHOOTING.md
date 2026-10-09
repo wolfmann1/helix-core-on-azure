@@ -4,7 +4,7 @@ Every failure hit while building this repository, with the error text, what
 actually caused it, and the commands that fix it. Search by the error string.
 
 Values in the examples come from the dev environment: subscription
-`6443b9b0-bdc8-4987-b940-7aaea0b54983`, resource group `p4-dev-rg`, node
+`<subscription-id>`, resource group `p4-dev-rg`, node
 `p4-dev-cae-commit-01`. Substitute your own.
 
 ---
@@ -226,7 +226,7 @@ az vm show -g p4-dev-rg -n p4-dev-cae-commit-01 `
 
 ```powershell
 terraform -chdir=envs/dev import 'module.commit.module.node.azurerm_linux_virtual_machine.this' `
-  "/subscriptions/6443b9b0-bdc8-4987-b940-7aaea0b54983/resourceGroups/p4-dev-rg/providers/Microsoft.Compute/virtualMachines/p4-dev-cae-commit-01"
+  "/subscriptions/<subscription-id>/resourceGroups/p4-dev-rg/providers/Microsoft.Compute/virtualMachines/p4-dev-cae-commit-01"
 ```
 
 **`provisioningState: Failed`** -- delete and re-apply:
